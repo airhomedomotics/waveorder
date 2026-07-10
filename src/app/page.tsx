@@ -239,16 +239,16 @@ export default function LandingPage() {
       <section id="simulator" className="px-6 py-24 max-w-7xl mx-auto">
         <div className="bg-slate-900 border border-slate-850 rounded-[2.5rem] p-8 md:p-12 flex flex-col lg:flex-row gap-12 items-center">
           <div className="flex-1 space-y-6">
-            <h3 className="text-xs font-black tracking-widest text-indigo-400 uppercase">Simulatore Ricavi Piattaforma</h3>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white">Quanto guadagni per ogni lido?</h2>
+            <h3 className="text-xs font-black tracking-widest text-indigo-400 uppercase">Simulatore di Costi per il tuo Lido</h3>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white">Trova il piano ideale per te</h2>
             <p className="text-slate-400 text-sm md:text-base leading-relaxed">
-              Muovi il cursore per simulare il transato mensile medio gestito dall'app per un singolo stabilimento balneare. Scopri quale tariffa conviene di più proporre al gestore.
+              Muovi il cursore per simulare il transato mensile stimato delle tue ordinazioni e vedi subito quanto ti costerebbe il servizio nei diversi piani.
             </p>
             
             {/* SLIDER */}
             <div className="space-y-4 pt-4">
               <div className="flex justify-between font-black">
-                <span className="text-slate-400">Transato mensile del lido:</span>
+                <span className="text-slate-400">Transato mensile stimato del lido:</span>
                 <span className="text-2xl text-indigo-400">€{transitoMensile.toLocaleString('it-IT')}</span>
               </div>
               <input 
@@ -274,10 +274,10 @@ export default function LandingPage() {
             <div className="bg-slate-950/80 border border-indigo-500/20 p-5.5 rounded-2xl flex justify-between items-center transition-all duration-300 hover:border-indigo-500/40">
               <div>
                 <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Opzione A (Commissione 5%)</span>
-                <h4 className="font-extrabold text-lg text-slate-200 mt-1">Nessun costo fisso per il lido</h4>
+                <h4 className="font-extrabold text-lg text-slate-200 mt-1">Nessun costo fisso o canone</h4>
               </div>
               <div className="text-right">
-                <span className="text-xs text-slate-500 block">Tuo ricavo lordo:</span>
+                <span className="text-xs text-slate-500 block">Costo servizio mensile:</span>
                 <span className="font-black text-xl text-white">€{costoPiena.toLocaleString('it-IT', { maximumFractionDigits: 0 })}/mese</span>
               </div>
             </div>
@@ -286,10 +286,10 @@ export default function LandingPage() {
             <div className="bg-slate-950/80 border border-slate-800 p-5.5 rounded-2xl flex justify-between items-center transition-all duration-300 hover:border-indigo-500/20">
               <div>
                 <span className="text-[10px] font-black text-sky-400 uppercase tracking-widest">Opzione B (Ibrido 149€ + 2%)</span>
-                <h4 className="font-extrabold text-lg text-slate-200 mt-1">Canone mensile + commissione bassa</h4>
+                <h4 className="font-extrabold text-lg text-slate-200 mt-1">Canone mensile + commissione ridotta</h4>
               </div>
               <div className="text-right">
-                <span className="text-xs text-slate-500 block">Tuo ricavo fisso + comm:</span>
+                <span className="text-xs text-slate-500 block">Costo fisso + comm:</span>
                 <span className="font-black text-xl text-white">€{costoIbrido.toLocaleString('it-IT', { maximumFractionDigits: 0 })}/mese</span>
               </div>
             </div>
@@ -298,10 +298,10 @@ export default function LandingPage() {
             <div className="bg-slate-950/80 border border-slate-800 p-5.5 rounded-2xl flex justify-between items-center transition-all duration-300 hover:border-indigo-500/20">
               <div>
                 <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Opzione C (Flat Stagionale)</span>
-                <h4 className="font-extrabold text-lg text-slate-200 mt-1">900€ ad attivazione (Maggio - Settembre)</h4>
+                <h4 className="font-extrabold text-lg text-slate-200 mt-1">900€ ad attivazione (0% commissioni)</h4>
               </div>
               <div className="text-right">
-                <span className="text-xs text-slate-500 block">Tuo ricavo fisso medio:</span>
+                <span className="text-xs text-slate-500 block">Costo fisso medio flat:</span>
                 <span className="font-black text-xl text-white">€{costoFlat.toLocaleString('it-IT', { maximumFractionDigits: 0 })}/mese</span>
               </div>
             </div>
