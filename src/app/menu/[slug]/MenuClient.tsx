@@ -96,6 +96,11 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
     });
   };
 
+  const getProductCartQty = (productId: string) => {
+    const item = cart.find((i) => i.prodotto.id === productId);
+    return item ? item.quantita : 0;
+  };
+
   const handleCheckout = async () => {
     if (!ombrelloneManuale.trim()) {
       setErrorMsg("Per favore inserisci il numero dell'ombrellone o tavolo.");
@@ -200,16 +205,16 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
         </div>
       )}
 
-      {/* CATEGORIE (SCROLL ORIZZONTALE) */}
-      <div className="px-6 py-4 overflow-x-auto scrollbar-none flex gap-2.5">
+      {/* CATEGORIE STICKY (SCROLL ORIZZONTALE) */}
+      <div className="sticky top-[72px] z-20 backdrop-blur-xl bg-slate-900/90 border-b border-slate-800/40 px-4 md:px-6 py-3.5 overflow-x-auto scrollbar-none flex gap-2.5">
         {categories.map((cat) => (
           <button
             key={cat.id}
             onClick={() => setSelectedCategory(cat.id)}
-            className={`whitespace-nowrap px-4.5 py-2.5 rounded-full text-sm font-semibold tracking-wide transition-all duration-300 ${
+            className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
               selectedCategory === cat.id
-                ? 'text-white border-none shadow-lg shadow-indigo-900/50'
-                : 'bg-slate-800 text-slate-400 border border-slate-700/50 hover:bg-slate-700/60'
+                ? 'text-white border-none shadow-lg shadow-indigo-900/40'
+                : 'bg-slate-800/50 text-slate-400 border border-slate-700/40 hover:bg-slate-700/60'
             }`}
             style={selectedCategory === cat.id ? { backgroundColor: 'var(--lido-primary)' } : {}}
           >
@@ -219,38 +224,61 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
       </div>
 
       {/* PRODOTTI LIST */}
-      <main className="px-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <main className="px-4 md:px-6 grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4">
         {filteredProducts.length === 0 ? (
-          <div className="col-span-full py-16 text-center text-slate-500">
+          <div className="col-span-full py-16 text-center text-slate-500 text-sm">
             Nessun prodotto disponibile in questa categoria.
           </div>
         ) : (
-          filteredProducts.map((product) => (
-            <div key={product.id} className="bg-slate-800/40 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4.5 flex gap-4 transition-all duration-300 hover:border-slate-700/50">
-              {product.immagine_url && (
-                <img src={product.immagine_url} alt={product.nome} className="w-20 h-20 rounded-xl object-cover border border-slate-700" />
-              )}
-              <div className="flex-1 flex flex-col justify-between">
-                <div>
-                  <h3 className="font-bold text-base text-slate-100 leading-snug">{product.nome}</h3>
-                  {product.descrizione && (
-                    <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">{product.descrizione}</p>
-                  )}
-                </div>
-                <div className="flex items-center justify-between mt-3">
-                  <span className="font-extrabold text-base tracking-wide text-indigo-400">
-                    €{Number(product.prezzo).toFixed(2)}
-                  </span>
-                  <button
-                    onClick={() => addToCart(product)}
-                    className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 hover:text-white transition-all duration-200 active:scale-95"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
+          filteredProducts.map((product) => {
+            const qty = getProductCartQty(product.id);
+            return (
+              <div key={product.id} className="bg-slate-800/25 backdrop-blur-md border border-slate-800/60 rounded-3xl p-4 flex gap-4 transition-all duration-300 hover:border-slate-700/40">
+                {product.immagine_url && (
+                  <img src={product.immagine_url} alt={product.nome} className="w-20 h-20 rounded-2xl object-cover border border-slate-700/60 flex-shrink-0" />
+                )}
+                <div className="flex-1 flex flex-col justify-between min-w-0">
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-100 leading-snug truncate">{product.nome}</h3>
+                    {product.descrizione && (
+                      <p className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">{product.descrizione}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between mt-3">
+                    <span className="font-black text-sm text-indigo-400">
+                      €{Number(product.prezzo).toFixed(2)}
+                    </span>
+                    
+                    {qty === 0 ? (
+                      <button
+                        onClick={() => addToCart(product)}
+                        className="flex items-center gap-1 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 text-[10px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl text-slate-200 hover:text-white transition-all active:scale-95"
+                      >
+                        <Plus className="w-3 h-3 text-indigo-400" />
+                        <span>Aggiungi</span>
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2.5 bg-slate-800/90 border border-slate-750 rounded-xl px-2 py-1">
+                        <button
+                          onClick={() => updateQuantity(product.id, -1)}
+                          className="p-1 hover:bg-slate-750 rounded text-slate-400 hover:text-white transition-colors"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="font-black text-xs min-w-4 text-center">{qty}</span>
+                        <button
+                          onClick={() => updateQuantity(product.id, 1)}
+                          className="p-1 hover:bg-slate-750 rounded text-slate-400 hover:text-white transition-colors"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </main>
 
@@ -302,8 +330,18 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
                 </div>
               )}
 
-              {/* OMBRELLONE REQUIREMENT IN MODAL IF MANUAL */}
-              {!initialOmbrellone && (
+              {/* LOCK INDICATOR SE CON TOKEN CODICE OMBRELLONE (ANTI-FRODE) */}
+              {initialOmbrellone ? (
+                <div className="mt-5 p-4 bg-emerald-950/20 border border-emerald-500/25 rounded-2xl flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                    <Check className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Punto Consegna Bloccato (QR)</span>
+                    <span className="block text-sm font-black text-white">{initialOmbrellone.codice_identificativo}</span>
+                  </div>
+                </div>
+              ) : (
                 <div className="mt-5 p-4 bg-slate-800/40 border border-slate-700/60 rounded-2xl">
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Numero Ombrellone / Tavolo *</label>
                   <input
