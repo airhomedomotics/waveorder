@@ -6,7 +6,7 @@ create table lidi (
     id uuid default uuid_generate_v4() primary key,
     nome_struttura varchar(255) not null,
     slug varchar(255) unique not null, -- Usato per l'URL del menu (es. lido-serena)
-    email_amministratore varchar(255) unique not null,
+    email_amministratore varchar(255) not null, -- Email del gestore principale
     logo_url text,
     colore_primario varchar(7) default '#0070f3',
     
