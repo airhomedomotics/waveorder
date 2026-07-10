@@ -67,12 +67,20 @@ export default function LandingPage() {
           <a href="#pricing" className="hover:text-white transition-colors">Piani</a>
         </div>
 
-        <a 
-          href="#contact" 
-          className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/25 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
-        >
-          Provalo Gratis
-        </a>
+        <div className="flex items-center gap-4">
+          <Link 
+            href="/login" 
+            className="text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-colors px-3 py-2"
+          >
+            Accedi
+          </Link>
+          <a 
+            href="#contact" 
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/25 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
+          >
+            Provalo Gratis
+          </a>
+        </div>
       </nav>
 
       {/* HERO SECTION */}
