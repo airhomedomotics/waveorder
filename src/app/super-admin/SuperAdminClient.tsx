@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { TrendingUp, DollarSign, Users, ShieldAlert, Check, X, Plus, Settings, Eye, HelpCircle } from 'lucide-react';
+import Link from 'next/link';
 
 interface Lido {
   id: string;
@@ -152,13 +153,21 @@ export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissi
           </p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-3 rounded-xl text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/25 transition-all duration-200"
-        >
-          <Plus className="w-4 h-4" />
-          Aggiungi Stabilimento
-        </button>
+        <div className="flex gap-3">
+          <Link
+            href="/dashboard/orders"
+            className="bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-200 font-bold px-5 py-3 rounded-xl text-sm flex items-center gap-2 transition-all duration-200"
+          >
+            Vai al Lido Demo
+          </Link>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-3 rounded-xl text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/25 transition-all duration-200"
+          >
+            <Plus className="w-4 h-4" />
+            Aggiungi Stabilimento
+          </button>
+        </div>
       </header>
 
       {/* CARDS METRICHE */}
