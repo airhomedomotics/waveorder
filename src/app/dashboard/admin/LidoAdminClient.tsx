@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { CreditCard, DollarSign, ArrowLeft, ShieldAlert, CheckCircle, Save, Globe, QrCode } from 'lucide-react';
+import { CreditCard, DollarSign, ArrowLeft, ShieldAlert, CheckCircle, Save, Globe, QrCode, Upload } from 'lucide-react';
 import Link from 'next/link';
+import { createClient } from '@/utils/supabase/client';
 
 interface Lido {
   id: string;
@@ -40,6 +41,37 @@ export default function LidoAdminClient({ lido, orders, cashCommissions }: LidoA
   const [accettaContanti, setAccettaContanti] = useState(lido.accetta_contanti);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const supabase = createClient();
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setIsUploadingLogo(true);
+    const file = e.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `logo-${lido.id}-${Math.random().toString(36).substring(2, 10)}.${fileExt}`;
+    const filePath = `loghi/${fileName}`;
+
+    try {
+      const { data, error } = await supabase.storage
+        .from('waveorder')
+        .upload(filePath, file);
+
+      if (error) {
+        setSaveMessage(`Errore caricamento: ${error.message}`);
+      } else {
+        const { data: { publicUrl } } = supabase.storage
+          .from('waveorder')
+          .getPublicUrl(filePath);
+        setLogoUrl(publicUrl);
+        setSaveMessage('Logo caricato con successo! Ricorda di salvare le impostazioni.');
+      }
+    } catch (err) {
+      setSaveMessage('Errore di rete durante il caricamento del logo.');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
 
   // Calcolo statistiche finanziarie del lido
   const stats = useMemo(() => {
@@ -208,14 +240,36 @@ export default function LidoAdminClient({ lido, orders, cashCommissions }: LidoA
             </div>
             
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">URL Logo (Opzionale)</label>
-              <input
-                type="text"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                placeholder="https://esempio.com/logo.png"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-              />
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Logo Stabilimento (Upload)</label>
+              <div className="flex gap-4 items-center bg-slate-950 border border-slate-800 rounded-xl p-4.5">
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Logo Preview" className="w-16 h-16 rounded-xl object-cover bg-slate-900 border border-slate-800" />
+                ) : (
+                  <div className="w-16 h-16 rounded-xl bg-slate-900 border border-slate-800 border-dashed flex items-center justify-center text-slate-500 font-bold text-xs">NO LOGO</div>
+                )}
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    disabled={isUploadingLogo}
+                    className="hidden"
+                    id="logo-upload-input"
+                  />
+                  <label
+                    htmlFor="logo-upload-input"
+                    className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-xs font-bold px-4 py-3 rounded-xl text-slate-200 cursor-pointer transition-colors"
+                  >
+                    {isUploadingLogo ? (
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    ) : (
+                      <Upload className="w-4.5 h-4.5 text-indigo-400" />
+                    )}
+                    Sfoglia Immagine
+                  </label>
+                  <p className="text-[10px] text-slate-500 mt-1.5">JPG, PNG o WEBP. Dimensione max 2MB.</p>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-1.5">

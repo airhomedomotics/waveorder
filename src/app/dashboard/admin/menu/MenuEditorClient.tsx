@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, ArrowLeft, Layers, Coffee, Check, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, ArrowLeft, Layers, Coffee, Check, X, Upload } from 'lucide-react';
 import Link from 'next/link';
+import { createClient } from '@/utils/supabase/client';
 
 interface Categoria {
   id: string;
@@ -31,6 +32,37 @@ export default function MenuEditorClient({ lidoId, initialCategories, initialPro
   const [activeTab, setActiveTab] = useState<'categories' | 'products'>('products');
   const [categories, setCategories] = useState<Categoria[]>(initialCategories);
   const [products, setProducts] = useState<Prodotto[]>(initialProducts);
+  const [isUploadingProd, setIsUploadingProd] = useState(false);
+  const supabase = createClient();
+
+  const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setIsUploadingProd(true);
+    const file = e.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `prod-${lidoId}-${Math.random().toString(36).substring(2, 10)}.${fileExt}`;
+    const filePath = `prodotti/${fileName}`;
+
+    try {
+      const { data, error } = await supabase.storage
+        .from('waveorder')
+        .upload(filePath, file);
+
+      if (error) {
+        setErrorMsg(`Errore caricamento immagine: ${error.message}`);
+      } else {
+        const { data: { publicUrl } } = supabase.storage
+          .from('waveorder')
+          .getPublicUrl(filePath);
+        setProdImg(publicUrl);
+        setErrorMsg(null);
+      }
+    } catch (err) {
+      setErrorMsg('Errore di rete durante il caricamento dell\'immagine.');
+    } finally {
+      setIsUploadingProd(false);
+    }
+  };
 
   // Modals state
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
@@ -466,14 +498,36 @@ export default function MenuEditorClient({ lidoId, initialCategories, initialPro
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">URL Immagine Prodotto</label>
-                <input
-                  type="text"
-                  placeholder="https://esempio.com/foto.jpg"
-                  value={prodImg}
-                  onChange={(e) => setProdImg(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                />
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Immagine Prodotto (Upload)</label>
+                <div className="flex gap-4 items-center bg-slate-950 border border-slate-800 rounded-xl p-4.5">
+                  {prodImg ? (
+                    <img src={prodImg} alt="Product Preview" className="w-16 h-16 rounded-xl object-cover bg-slate-900 border border-slate-800" />
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-slate-900 border border-slate-800 border-dashed flex items-center justify-center text-slate-500 font-bold text-xs">NO IMG</div>
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleProductImageUpload}
+                      disabled={isUploadingProd}
+                      className="hidden"
+                      id="product-image-upload"
+                    />
+                    <label
+                      htmlFor="product-image-upload"
+                      className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-xs font-bold px-4 py-3 rounded-xl text-slate-200 cursor-pointer transition-colors"
+                    >
+                      {isUploadingProd ? (
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      ) : (
+                        <Upload className="w-4.5 h-4.5 text-indigo-400" />
+                      )}
+                      Sfoglia Immagine
+                    </label>
+                    <p className="text-[10px] text-slate-500 mt-1.5">JPG, PNG o WEBP. Dimensione max 2MB.</p>
+                  </div>
+                </div>
               </div>
               <div className="flex items-center justify-between p-3 bg-slate-950 rounded-xl">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Disponibile</span>
