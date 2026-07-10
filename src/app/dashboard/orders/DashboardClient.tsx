@@ -202,7 +202,7 @@ export default function DashboardClient({ lido, initialOrders }: DashboardClient
           ) : (
             <div className="bg-red-500/15 border border-red-500/30 text-red-400 text-xs px-4 py-2 rounded-xl flex items-center gap-2 animate-pulse">
               <ShieldAlert className="w-4 h-4" />
-              <span className="font-bold">Contanti Disabilitati per Tasso Cancellazione Elevato (>10%)</span>
+              <span className="font-bold">Contanti Disabilitati per Tasso Cancellazione Elevato (&gt;10%)</span>
             </div>
           )}
         </div>

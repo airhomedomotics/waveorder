@@ -401,7 +401,9 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
                 className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-bold transition-all duration-300 disabled:opacity-50 text-white shadow-lg"
                 style={{
                   backgroundColor: paymentMethod === 'contanti' ? '#10b981' : 'var(--lido-primary)',
-                  shadowColor: paymentMethod === 'contanti' ? 'rgba(16, 185, 129, 0.4)' : 'rgba(0, 112, 243, 0.4)'
+                  boxShadow: paymentMethod === 'contanti' 
+                    ? '0 10px 15px -3px rgba(16, 185, 129, 0.4)' 
+                    : '0 10px 15px -3px rgba(0, 112, 243, 0.4)'
                 }}
               >
                 {isSubmitting ? (
