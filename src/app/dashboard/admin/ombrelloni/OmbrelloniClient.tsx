@@ -57,7 +57,11 @@ export default function OmbrelloniClient({ lidoId, lidoSlug, initialOmbrelloni }
         .select();
 
       if (error) {
-        setErrorMsg(error.message);
+        if (error.code === '23505' || error.message.includes('unique constraint') || error.message.includes('duplicate key')) {
+          setErrorMsg("Alcuni ombrelloni in questo intervallo sono già presenti per questa Fila/Zona. Prova ad inserire una Fila diversa, a iniziare da un numero successivo (es. da 6) oppure elimina prima quelli esistenti!");
+        } else {
+          setErrorMsg(error.message);
+        }
       } else if (data) {
         setOmbrelloni((prev) => [...prev, ...data]);
       }
