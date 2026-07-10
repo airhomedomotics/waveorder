@@ -1,0 +1,313 @@
+'use client';
+
+import React, { useState, useMemo } from 'react';
+import { CreditCard, DollarSign, ArrowLeft, ShieldAlert, CheckCircle, Save, Globe, QrCode } from 'lucide-react';
+import Link from 'next/link';
+
+interface Lido {
+  id: string;
+  nome_struttura: string;
+  slug: string;
+  logo_url: string | null;
+  colore_primario: string;
+  tipo_contratto: string;
+  accetta_contanti: boolean;
+  pagamenti_digitali_attivi: boolean;
+  stripe_account_id: string | null;
+}
+
+interface Order {
+  totale: number | string;
+  metodo_pagamento: string;
+  stato_pagamento: string;
+  stato: string;
+}
+
+interface CashCommission {
+  importo_commissione: number | string;
+}
+
+interface LidoAdminClientProps {
+  lido: Lido;
+  orders: Order[];
+  cashCommissions: CashCommission[];
+}
+
+export default function LidoAdminClient({ lido, orders, cashCommissions }: LidoAdminClientProps) {
+  const [nomeStruttura, setNomeStruttura] = useState(lido.nome_struttura);
+  const [logoUrl, setLogoUrl] = useState(lido.logo_url || '');
+  const [colorePrimario, setColorePrimario] = useState(lido.colore_primario);
+  const [accettaContanti, setAccettaContanti] = useState(lido.accetta_contanti);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  // Calcolo statistiche finanziarie del lido
+  const stats = useMemo(() => {
+    const paidOrders = orders.filter((o) => o.stato_pagamento === 'pagato');
+    
+    const totalSales = paidOrders.reduce((sum, o) => sum + Number(o.totale), 0);
+    const cardSales = paidOrders.filter((o) => o.metodo_pagamento === 'carta_stripe').reduce((sum, o) => sum + Number(o.totale), 0);
+    const cashSales = paidOrders.filter((o) => o.metodo_pagamento === 'contanti').reduce((sum, o) => sum + Number(o.totale), 0);
+
+    // Calcolo tasso cancellazione contanti settimanale (simuliamo su base storica totale)
+    const cashOrders = orders.filter((o) => o.metodo_pagamento === 'contanti');
+    const cancelledCashOrders = cashOrders.filter((o) => o.stato === 'annullato');
+    const cashCancelRate = cashOrders.length > 0 ? (cancelledCashOrders.length / cashOrders.length) * 100 : 0;
+
+    const totalCashDue = cashCommissions.reduce((sum, c) => sum + Number(c.importo_commissione), 0);
+
+    return {
+      totalSales,
+      cardSales,
+      cashSales,
+      cashCancelRate,
+      totalCashDue,
+      cashOrdersCount: cashOrders.length,
+    };
+  }, [orders, cashCommissions]);
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setSaveMessage(null);
+
+    try {
+      const res = await fetch('/api/lidi', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome_struttura: nomeStruttura,
+          logo_url: logoUrl || null,
+          colore_primario: colorePrimario,
+          accetta_contanti: accettaContanti,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.error) {
+        setSaveMessage(`Errore: ${data.error}`);
+      } else {
+        setSaveMessage('Impostazioni salvate con successo!');
+      }
+    } catch (err) {
+      setSaveMessage('Errore di rete durante il salvataggio.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-6 pb-12">
+      {/* HEADER */}
+      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-900 mb-8 max-w-7xl mx-auto">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard/orders"
+            className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-black tracking-tight">{lido.nome_struttura} - Impostazioni Admin</h1>
+            <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider font-bold">
+              Gestione Menu, Spiaggia e Configurazione Commerciale
+            </p>
+          </div>
+        </div>
+
+        {/* Link rapidi alle altre sezioni admin */}
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/dashboard/admin/menu"
+            className="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 hover:bg-slate-850 text-xs font-bold px-4 py-2.5 rounded-xl text-slate-200"
+          >
+            Gestione Menu
+          </Link>
+          <Link
+            href="/dashboard/admin/ombrelloni"
+            className="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 hover:bg-slate-850 text-xs font-bold px-4 py-2.5 rounded-xl text-slate-200"
+          >
+            Generatore Spiaggia & QR
+          </Link>
+        </div>
+      </header>
+
+      {/* METRICHE FINANZIARIE DEL LIDO */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto mb-10">
+        {/* Card 1: Fatturato Totale */}
+        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5.5 flex items-center gap-4.5">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold">
+            €
+          </div>
+          <div>
+            <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fatturato Totale</span>
+            <span className="block text-xl font-black text-white mt-0.5">€{stats.totalSales.toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Card 2: Carte */}
+        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5.5 flex items-center gap-4.5">
+          <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
+            <CreditCard className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fatturato Carte</span>
+            <span className="block text-xl font-black text-white mt-0.5">€{stats.cardSales.toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Card 3: Contanti */}
+        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5.5 flex items-center gap-4.5">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+            <DollarSign className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fatturato Contanti</span>
+            <span className="block text-xl font-black text-white mt-0.5">€{stats.cashSales.toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Card 4: Saldo platform */}
+        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5.5 flex items-center gap-4.5">
+          <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-400 flex items-center justify-center">
+            <ShieldAlert className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Comm. Contanti Dovute</span>
+            <span className="block text-xl font-black text-red-400 mt-0.5">€{stats.totalCashDue.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* COMPILAZIONE INFORMAZIONI E BRANDING */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+        {/* Form Impostazioni */}
+        <div className="lg:col-span-2 bg-slate-900/40 border border-slate-900 rounded-3xl p-6.5">
+          <h2 className="font-extrabold text-lg text-slate-100 pb-4 border-b border-slate-900 mb-6">Impostazioni Stabilimento</h2>
+          
+          {saveMessage && (
+            <div className={`p-3.5 rounded-xl text-xs font-semibold mb-6 border ${
+              saveMessage.includes('Errore')
+                ? 'bg-red-500/20 border-red-500/30 text-red-300'
+                : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+            }`}>
+              {saveMessage}
+            </div>
+          )}
+
+          <form onSubmit={handleSaveSettings} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Nome Stabilimento *</label>
+              <input
+                type="text"
+                required
+                value={nomeStruttura}
+                onChange={(e) => setNomeStruttura(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+            </div>
+            
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">URL Logo (Opzionale)</label>
+              <input
+                type="text"
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+                placeholder="https://esempio.com/logo.png"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Colore Primario di Brand</label>
+              <div className="flex gap-4 items-center">
+                <input
+                  type="color"
+                  value={colorePrimario}
+                  onChange={(e) => setColorePrimario(e.target.value)}
+                  className="w-12 h-12 bg-transparent border-0 rounded-xl cursor-pointer"
+                />
+                <span className="text-sm font-mono uppercase tracking-wider">{colorePrimario}</span>
+              </div>
+            </div>
+
+            {/* SELEZIONE CONTANTI (CON ALERT SE BLOCCATO DA SISTEMA) */}
+            <div className="p-4 bg-slate-950 border border-slate-900 rounded-2xl space-y-3">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="font-bold text-sm">Accetta pagamenti in contanti</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">Permette ai clienti di pagare l'ordinazione al cameriere</p>
+                </div>
+                <input
+                  type="checkbox"
+                  disabled={!lido.accetta_contanti && stats.cashCancelRate > 10 && stats.cashOrdersCount >= 10} // Blocco se disabilitato da anti-frode
+                  checked={accettaContanti}
+                  onChange={(e) => setAccettaContanti(e.target.checked)}
+                  className="w-5 h-5 rounded border-slate-800 text-indigo-650 bg-slate-950 focus:ring-indigo-500/50 cursor-pointer disabled:opacity-50"
+                />
+              </div>
+
+              {!lido.accetta_contanti && stats.cashCancelRate > 10 && stats.cashOrdersCount >= 10 && (
+                <div className="bg-red-500/15 border border-red-500/30 text-red-400 text-xs p-3.5 rounded-xl flex gap-2.5 leading-relaxed">
+                  <ShieldAlert className="w-5 h-5 shrink-0" />
+                  <p>
+                    <strong>Opzione Contanti Sospesa Automaticamente:</strong> Il tuo tasso di cancellazione ordini contanti negli ultimi 7 giorni ({stats.cashCancelRate.toFixed(1)}%) supera il limite del 10%. Per sbloccare l'opzione contatti contatta l'assistenza.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="inline-flex items-center gap-2 bg-indigo-650 hover:bg-indigo-650/80 text-white font-bold px-6 py-3.5 rounded-2xl text-xs uppercase tracking-wider shadow-lg transition-colors duration-200"
+            >
+              <Save className="w-4 h-4" />
+              {isSaving ? "Salvataggio..." : "Salva Impostazioni"}
+            </button>
+          </form>
+        </div>
+
+        {/* Informazioni Stripe Connect */}
+        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-6.5 h-fit space-y-6">
+          <h2 className="font-extrabold text-lg text-slate-100 pb-4 border-b border-slate-900">Stripe Connect</h2>
+          
+          {lido.stripe_account_id ? (
+            <div className="space-y-4">
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-2xl flex gap-2.5 items-start">
+                <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold">Account Connesso</h4>
+                  <p className="text-slate-300 mt-1 leading-relaxed">Il tuo lido è connesso a Stripe con ID: <strong>{lido.stripe_account_id}</strong></p>
+                </div>
+              </div>
+              
+              <div className="text-xs text-slate-400 leading-relaxed">
+                I pagamenti digitali dei clienti dall'ombrellone fluiscono direttamente sul tuo conto Stripe. L'application fee contrattuale del lido viene trattenuta ed accreditata alla piattaforma in modalità split automatico alla sorgente.
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs rounded-2xl flex gap-2.5 items-start">
+                <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold">Stripe Non Configurato</h4>
+                  <p className="text-slate-300 mt-1 leading-relaxed">Completa l'onboarding di Stripe per abilitare i pagamenti con Carta e Apple Pay dall'ombrellone.</p>
+                </div>
+              </div>
+
+              <button
+                disabled
+                className="w-full py-4 text-center bg-slate-800 border border-slate-700 text-slate-400 font-bold rounded-2xl text-xs uppercase tracking-wider cursor-not-allowed"
+              >
+                Connetti Stripe Connect
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+

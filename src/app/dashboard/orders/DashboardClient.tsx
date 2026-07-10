@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Play, Check, X, AlertTriangle, ShieldAlert, ShoppingCart, DollarSign, CreditCard } from 'lucide-react';
+import { Play, Check, X, AlertTriangle, ShieldAlert, ShoppingCart, DollarSign, CreditCard, Printer } from 'lucide-react';
 
 interface Lido {
   id: string;
@@ -44,6 +44,7 @@ export default function DashboardClient({ lido, initialOrders }: DashboardClient
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [activeWarnOrder, setActiveWarnOrder] = useState<Order | null>(null);
   const [isLidoCashActive, setIsLidoCashActive] = useState(lido.accetta_contanti);
+  const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
   const supabase = createClient();
 
   // Riproduce un suono acustico sintetizzato (Web Audio API)
@@ -115,12 +116,6 @@ export default function DashboardClient({ lido, initialOrders }: DashboardClient
           } else if (payload.eventType === 'UPDATE') {
             const updated = payload.new as any;
             
-            // Se lo stato di accetta_contanti del lido cambia (es. disabilitato da trigger anti-frode)
-            if (updated.id === lido.id) {
-              // Questo payload si riferisce alla tabella lidi se ascoltassimo i lidi, 
-              // ma siccome ascoltiamo ordini, controlliamo se l'opzione contanti del lido è cambiata
-            }
-
             // Aggiorna l'ordine locale
             const fullOrder = await fetchOrderDetails(updated.id);
             if (fullOrder) {
@@ -166,7 +161,6 @@ export default function DashboardClient({ lido, initialOrders }: DashboardClient
   };
 
   const handleCancelClick = (order: Order) => {
-    // Se l'ordine è in contanti ed è già in preparazione, mostra avviso anti-frode
     if (order.metodo_pagamento === 'contanti' && order.stato === 'in_preparazione') {
       setActiveWarnOrder(order);
     } else {
@@ -174,17 +168,25 @@ export default function DashboardClient({ lido, initialOrders }: DashboardClient
     }
   };
 
+  const handlePrintOrder = (order: Order) => {
+    setPrintingOrder(order);
+    setTimeout(() => {
+      window.print();
+      setPrintingOrder(null);
+    }, 150);
+  };
+
   // Separa gli ordini in colonne
   const columns = {
     inviati: orders.filter((o) => o.stato === 'inviato'),
     in_preparazione: orders.filter((o) => o.stato === 'in_preparazione'),
-    completati: orders.filter((o) => o.stato === 'consegnato' || o.stato === 'annullato').slice(0, 15), // Mostra solo i 15 più recenti
+    completati: orders.filter((o) => o.stato === 'consegnato' || o.stato === 'annullato').slice(0, 15),
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-6 pb-12">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-6 pb-12 print:bg-white print:text-black">
       {/* HEADER DELLA DASHBOARD */}
-      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-900 mb-8">
+      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-900 mb-8 print:hidden">
         <div>
           <h1 className="text-2xl font-black tracking-tight">{lido.nome_struttura}</h1>
           <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider font-bold">
@@ -209,7 +211,7 @@ export default function DashboardClient({ lido, initialOrders }: DashboardClient
       </header>
 
       {/* GRIGLIA KANBAN */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
         {/* COLONNA: IN ARRIVO */}
         <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5 flex flex-col h-[75vh]">
           <div className="flex items-center justify-between pb-4 border-b border-slate-900 mb-4">
@@ -229,7 +231,7 @@ export default function DashboardClient({ lido, initialOrders }: DashboardClient
               </div>
             ) : (
               columns.inviati.map((order) => (
-                <OrderCard key={order.id} order={order} onStart={() => updateOrderStatus(order.id, 'in_preparazione')} onCancel={() => handleCancelClick(order)} />
+                <OrderCard key={order.id} order={order} onStart={() => updateOrderStatus(order.id, 'in_preparazione')} onCancel={() => handleCancelClick(order)} onPrint={handlePrintOrder} />
               ))
             )}
           </div>
@@ -254,7 +256,7 @@ export default function DashboardClient({ lido, initialOrders }: DashboardClient
               </div>
             ) : (
               columns.in_preparazione.map((order) => (
-                <OrderCard key={order.id} order={order} onComplete={() => updateOrderStatus(order.id, 'consegnato')} onCancel={() => handleCancelClick(order)} />
+                <OrderCard key={order.id} order={order} onComplete={() => updateOrderStatus(order.id, 'consegnato')} onCancel={() => handleCancelClick(order)} onPrint={handlePrintOrder} />
               ))
             )}
           </div>
@@ -279,16 +281,51 @@ export default function DashboardClient({ lido, initialOrders }: DashboardClient
               </div>
             ) : (
               columns.completati.map((order) => (
-                <OrderCard key={order.id} order={order} />
+                <OrderCard key={order.id} order={order} onPrint={handlePrintOrder} />
               ))
             )}
           </div>
         </div>
       </div>
 
+      {/* SEZEIONE DI STAMPA COMANDA (Attiva solo su window.print()) */}
+      {printingOrder && (
+        <div className="hidden print:block fixed inset-0 z-50 bg-white text-black p-4 w-[80mm] mx-auto text-xs font-mono printable-receipt">
+          <div className="text-center font-bold text-sm uppercase mb-1">
+            {lido.nome_struttura}
+          </div>
+          <div className="text-center text-[10px] uppercase tracking-wider mb-2 border-b border-black border-dashed pb-1.5">
+            Comanda di Servizio
+          </div>
+          <div className="space-y-1 mb-2">
+            <div><strong>Tavolo/Ombrellone:</strong> {printingOrder.ombrelloni?.codice_identificativo || printingOrder.numero_ombrellone_manuale || 'N/A'}</div>
+            <div><strong>Orario:</strong> {new Date(printingOrder.creato_il).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</div>
+            <div><strong>Pagamento:</strong> {printingOrder.metodo_pagamento === 'carta_stripe' ? 'Digitale (Stripe)' : 'Contanti'}</div>
+          </div>
+          <div className="border-b border-black border-dashed my-2"></div>
+          <div className="space-y-1.5 mb-2">
+            {printingOrder.dettagli_ordine.map((det) => (
+              <div key={det.id} className="flex justify-between items-start">
+                <div>
+                  <span className="font-bold">{det.prodotti?.nome || 'Prodotto'}</span>
+                  <span className="text-slate-700"> x{det.quantita}</span>
+                  {det.note && <span className="block text-[10px] italic">Nota: "{det.note}"</span>}
+                </div>
+                <span>€{(Number(det.prezzo_unitario) * det.quantita).toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="border-b border-black border-dashed my-2"></div>
+          <div className="flex justify-between font-bold text-sm">
+            <span>TOTALE ORDINE</span>
+            <span>€{Number(printingOrder.totale).toFixed(2)}</span>
+          </div>
+        </div>
+      )}
+
       {/* MODAL DI WARNING ANTI-FRODE */}
       {activeWarnOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-6 print:hidden">
           <div className="bg-slate-900 border border-red-500/30 rounded-3xl max-w-md w-full p-6 shadow-2xl">
             <div className="flex items-center gap-3 text-red-400 border-b border-slate-850 pb-4 mb-4">
               <ShieldAlert className="w-8 h-8" />
@@ -337,6 +374,28 @@ export default function DashboardClient({ lido, initialOrders }: DashboardClient
           </div>
         </div>
       )}
+
+      {/* STILI PER HIDE/SHOW ELEMENTI IN STAMPA */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          .printable-receipt, .printable-receipt * {
+            visibility: visible !important;
+          }
+          .printable-receipt {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 8px !important;
+            background-color: white !important;
+            color: black !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -347,9 +406,10 @@ interface OrderCardProps {
   onStart?: () => void;
   onComplete?: () => void;
   onCancel?: () => void;
+  onPrint?: (order: Order) => void;
 }
 
-function OrderCard({ order, onStart, onComplete, onCancel }: OrderCardProps) {
+function OrderCard({ order, onStart, onComplete, onCancel, onPrint }: OrderCardProps) {
   const formatTime = (isoString: string) => {
     const d = new Date(isoString);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -368,7 +428,18 @@ function OrderCard({ order, onStart, onComplete, onCancel }: OrderCardProps) {
         <span className="font-extrabold text-slate-200 text-sm">
           Ombrellone: {order.ombrelloni?.codice_identificativo || order.numero_ombrellone_manuale || 'N/A'}
         </span>
-        <span>{formatTime(order.creato_il)}</span>
+        <div className="flex items-center gap-2">
+          <span>{formatTime(order.creato_il)}</span>
+          {onPrint && (
+            <button
+              onClick={() => onPrint(order)}
+              className="p-1 rounded bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition-colors"
+              title="Stampa Comanda"
+            >
+              <Printer className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* CARD ITEMS */}
