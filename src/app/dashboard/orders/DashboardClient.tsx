@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Play, Check, X, AlertTriangle, ShieldAlert, ShoppingCart, DollarSign, CreditCard, Printer } from 'lucide-react';
+import { Play, Check, X, AlertTriangle, ShieldAlert, ShoppingCart, DollarSign, CreditCard, Printer, Settings } from 'lucide-react';
 
 interface Lido {
   id: string;
@@ -38,9 +38,10 @@ interface Order {
 interface DashboardClientProps {
   lido: Lido;
   initialOrders: Order[];
+  userRole: string;
 }
 
-export default function DashboardClient({ lido, initialOrders }: DashboardClientProps) {
+export default function DashboardClient({ lido, initialOrders, userRole }: DashboardClientProps) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [activeWarnOrder, setActiveWarnOrder] = useState<Order | null>(null);
   const [isLidoCashActive, setIsLidoCashActive] = useState(lido.accetta_contanti);
@@ -194,8 +195,18 @@ export default function DashboardClient({ lido, initialOrders }: DashboardClient
           </p>
         </div>
 
-        {/* STATUS BANNER ANTI-FRODE CONTANTI */}
+        {/* STATUS BANNER ANTI-FRODE CONTANTI E IMPOSTAZIONI GESTORE */}
         <div className="flex items-center gap-3">
+          {userRole === 'admin' && (
+            <a
+              href="/dashboard/admin"
+              className="bg-slate-900 border border-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold px-4.5 py-2.5 rounded-xl flex items-center gap-2 transition-colors"
+            >
+              <Settings className="w-4 h-4 text-indigo-400" />
+              Gestione Lido
+            </a>
+          )}
+
           {isLidoCashActive ? (
             <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs px-4 py-2 rounded-xl flex items-center gap-2">
               <DollarSign className="w-4 h-4" />

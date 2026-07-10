@@ -14,7 +14,7 @@ export default async function DashboardOrdersPage() {
   // Verifica che l'utente sia associato a un lido
   const { data: gestoreList, error: gestoreError } = await supabase
     .from('lidi_gestori')
-    .select('lido_id')
+    .select('lido_id, ruolo')
     .eq('user_id', user.id)
     .limit(1);
 
@@ -50,6 +50,7 @@ export default async function DashboardOrdersPage() {
     <DashboardClient
       lido={lido!}
       initialOrders={initialOrders || []}
+      userRole={gestore.ruolo || 'staff'}
     />
   );
 }
