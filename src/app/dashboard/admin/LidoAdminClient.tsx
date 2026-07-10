@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { CreditCard, DollarSign, ArrowLeft, ShieldAlert, CheckCircle, Save, Globe, QrCode, Upload } from 'lucide-react';
+import { CreditCard, DollarSign, ArrowLeft, ShieldAlert, CheckCircle, Save, Globe, QrCode, Upload, Users, Search, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 
@@ -31,13 +31,23 @@ interface CashCommission {
   importo_commissione: number | string;
 }
 
+interface ClienteFidelity {
+  id: string;
+  nome: string;
+  cognome: string;
+  telefono: string;
+  punti_totali: number;
+  creato_il: string;
+}
+
 interface LidoAdminClientProps {
   lido: Lido;
   orders: Order[];
   cashCommissions: CashCommission[];
+  clientiFidelity: ClienteFidelity[];
 }
 
-export default function LidoAdminClient({ lido, orders, cashCommissions }: LidoAdminClientProps) {
+export default function LidoAdminClient({ lido, orders, cashCommissions, clientiFidelity }: LidoAdminClientProps) {
   const [nomeStruttura, setNomeStruttura] = useState(lido.nome_struttura);
   const [logoUrl, setLogoUrl] = useState(lido.logo_url || '');
   const [colorePrimario, setColorePrimario] = useState(lido.colore_primario);
@@ -48,6 +58,7 @@ export default function LidoAdminClient({ lido, orders, cashCommissions }: LidoA
   const [fidelityAttivo, setFidelityAttivo] = useState(lido.fidelity_attivo !== undefined ? lido.fidelity_attivo : true);
   const [fidelitySogliaPunti, setFidelitySogliaPunti] = useState(lido.fidelity_soglia_punti || 100);
   const [fidelityValoreSconto, setFidelityValoreSconto] = useState(Number(lido.fidelity_valore_sconto) || 5.00);
+  const [clientiSearch, setClientiSearch] = useState('');
   const supabase = createClient();
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -417,6 +428,80 @@ export default function LidoAdminClient({ lido, orders, cashCommissions }: LidoA
           )}
         </div>
       </div>
+
+      {/* SEZIONE CLIENTI FIDELITY REGISTRATI */}
+      {fidelityAttivo && (
+        <div className="max-w-7xl mx-auto mt-10">
+          <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-6.5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-900">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-extrabold text-lg text-slate-100">Clienti WaveCard</h2>
+                  <p className="text-xs text-slate-500">{clientiFidelity.length} clienti registrati</p>
+                </div>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Cerca per nome o telefono..."
+                  value={clientiSearch}
+                  onChange={(e) => setClientiSearch(e.target.value)}
+                  className="w-full md:w-72 bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+              </div>
+            </div>
+
+            {clientiFidelity.length === 0 ? (
+              <div className="py-12 text-center">
+                <Trophy className="w-10 h-10 text-slate-700 mx-auto mb-3" />
+                <p className="text-sm text-slate-500 font-medium">Nessun cliente registrato alla WaveCard</p>
+                <p className="text-xs text-slate-600 mt-1">I clienti si registreranno tramite la PWA del menu</p>
+              </div>
+            ) : (
+              <div className="mt-5 space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                {clientiFidelity
+                  .filter((c) => {
+                    if (!clientiSearch.trim()) return true;
+                    const search = clientiSearch.toLowerCase();
+                    return (
+                      c.nome.toLowerCase().includes(search) ||
+                      c.cognome.toLowerCase().includes(search) ||
+                      c.telefono.includes(search)
+                    );
+                  })
+                  .map((cliente) => (
+                    <div key={cliente.id} className="flex items-center justify-between bg-slate-950/50 border border-slate-900 rounded-2xl px-5 py-4 hover:border-slate-800 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-sm">
+                          {cliente.nome.charAt(0)}{cliente.cognome.charAt(0)}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-sm text-slate-200">{cliente.nome} {cliente.cognome}</h4>
+                          <p className="text-xs text-slate-500 mt-0.5">{cliente.telefono}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-baseline gap-1 justify-end">
+                          <span className="text-xl font-black text-indigo-400">{cliente.punti_totali}</span>
+                          <span className="text-[10px] text-slate-500 font-bold">PTS</span>
+                        </div>
+                        {cliente.punti_totali >= fidelitySogliaPunti && (
+                          <span className="inline-block bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-2 py-0.5 rounded-full mt-1">
+                            Premio pronto!
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,12 +4,12 @@ import SuccessClient from './SuccessClient';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ order_id?: string }>;
+  searchParams: Promise<{ order_id?: string; cliente_id?: string }>;
 }
 
 export default async function SuccessPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
-  const { order_id } = await searchParams;
+  const { order_id, cliente_id } = await searchParams;
 
   if (!order_id) {
     notFound();
@@ -52,6 +52,7 @@ export default async function SuccessPage({ params, searchParams }: PageProps) {
     <SuccessClient
       lido={lido}
       initialOrder={order}
+      clienteId={cliente_id || null}
     />
   );
 }

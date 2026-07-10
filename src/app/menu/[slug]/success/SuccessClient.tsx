@@ -40,9 +40,10 @@ interface Order {
 interface SuccessClientProps {
   lido: Lido;
   initialOrder: Order;
+  clienteId: string | null;
 }
 
-export default function SuccessClient({ lido, initialOrder }: SuccessClientProps) {
+export default function SuccessClient({ lido, initialOrder, clienteId }: SuccessClientProps) {
   const [order, setOrder] = useState<Order>(initialOrder);
   const [pointsEarned, setPointsEarned] = useState(0);
   const [newTotalPoints, setNewTotalPoints] = useState(0);
@@ -55,32 +56,76 @@ export default function SuccessClient({ lido, initialOrder }: SuccessClientProps
 
       const pointsKey = `waveorder_points_${lido.slug}`;
       const hasAddedKey = `points_added_${order.id}`;
-
       const hasAdded = localStorage.getItem(hasAddedKey);
-      const savedPoints = localStorage.getItem(pointsKey);
-      let currentPoints = 0;
-      if (savedPoints) {
-        currentPoints = parseInt(savedPoints, 10);
-      }
 
       // Se l'ordine conteneva lo sconto punti, dobbiamo sottrarre la soglia punti spesa!
       const isDiscounted = order.numero_ombrellone_manuale?.includes('[SCONTO PUNTI]');
       const threshold = lido.fidelity_soglia_punti || 100;
 
       if (!hasAdded) {
-        let updatedPoints = currentPoints + earned;
-        if (isDiscounted) {
-          // Sottrai punti spesi per lo sconto
-          updatedPoints = Math.max(0, updatedPoints - threshold);
-        }
-        localStorage.setItem(pointsKey, String(updatedPoints));
         localStorage.setItem(hasAddedKey, 'true');
-        setNewTotalPoints(updatedPoints);
+
+        // --- AGGIORNA PUNTI NEL DB SE CLIENTE REGISTRATO ---
+        if (clienteId) {
+          const updateBody: any = { cliente_id: clienteId, punti_da_aggiungere: earned };
+          if (isDiscounted) {
+            updateBody.punti_da_sottrarre = threshold;
+          }
+          fetch('/api/clienti-fidelity', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateBody),
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data.cliente) {
+                setNewTotalPoints(data.cliente.punti_totali);
+                localStorage.setItem(pointsKey, String(data.cliente.punti_totali));
+              }
+            })
+            .catch(() => {
+              // Fallback: aggiorna localStorage
+              const savedPoints = localStorage.getItem(pointsKey);
+              let currentPoints = savedPoints ? parseInt(savedPoints, 10) : 0;
+              let updatedPoints = currentPoints + earned;
+              if (isDiscounted) updatedPoints = Math.max(0, updatedPoints - threshold);
+              localStorage.setItem(pointsKey, String(updatedPoints));
+              setNewTotalPoints(updatedPoints);
+            });
+        } else {
+          // Nessun profilo DB — salva solo in localStorage
+          const savedPoints = localStorage.getItem(pointsKey);
+          let currentPoints = savedPoints ? parseInt(savedPoints, 10) : 0;
+          let updatedPoints = currentPoints + earned;
+          if (isDiscounted) updatedPoints = Math.max(0, updatedPoints - threshold);
+          localStorage.setItem(pointsKey, String(updatedPoints));
+          setNewTotalPoints(updatedPoints);
+        }
       } else {
-        setNewTotalPoints(currentPoints);
+        // Già aggiunto: mostra i punti correnti
+        if (clienteId) {
+          const savedTelefono = localStorage.getItem(`waveorder_telefono_${lido.slug}`);
+          if (savedTelefono) {
+            fetch(`/api/clienti-fidelity?lido_id=${lido.slug}&telefono=${encodeURIComponent(savedTelefono)}`)
+              .then(res => res.json())
+              .then(data => {
+                if (data.cliente) setNewTotalPoints(data.cliente.punti_totali);
+              })
+              .catch(() => {
+                const savedPoints = localStorage.getItem(pointsKey);
+                setNewTotalPoints(savedPoints ? parseInt(savedPoints, 10) : 0);
+              });
+          } else {
+            const savedPoints = localStorage.getItem(pointsKey);
+            setNewTotalPoints(savedPoints ? parseInt(savedPoints, 10) : 0);
+          }
+        } else {
+          const savedPoints = localStorage.getItem(pointsKey);
+          setNewTotalPoints(savedPoints ? parseInt(savedPoints, 10) : 0);
+        }
       }
     }
-  }, [order.id, order.totale, order.numero_ombrellone_manuale, lido.slug]);
+  }, [order.id, order.totale, order.numero_ombrellone_manuale, lido.slug, clienteId]);
 
   useEffect(() => {
     // Sottoscrizione realtime ai cambiamenti di stato dell'ordine corrente

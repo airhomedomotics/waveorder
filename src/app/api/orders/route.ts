@@ -72,7 +72,7 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient();
     const body = await request.json();
-    const { lido_id, ombrellone_id, numero_ombrellone_manuale, items, fidelity_discount } = body;
+    const { lido_id, ombrellone_id, numero_ombrellone_manuale, items, fidelity_discount, cliente_fidelity_id } = body;
 
     if (!lido_id || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Dati carrello non validi' }, { status: 400 });
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     // 1. Verifica se il lido accetta contanti
     const { data: lido, error: lidoError } = await supabase
       .from('lidi')
-      .select('accetta_contanti, tipo_contratto, quota_commissione_percentuale')
+      .select('accetta_contanti, tipo_contratto, quota_commissione_percentuale, fidelity_valore_sconto')
       .eq('id', lido_id)
       .single();
 
@@ -126,14 +126,15 @@ export async function POST(request: Request) {
       });
     }
 
-    // Applica lo Sconto Fedeltà (5€ per 100 Punti)
+    // Applica lo Sconto Fedeltà (dinamico da impostazioni lido)
     const hasFidelityDiscount = fidelity_discount === true;
-    const discountAmount = hasFidelityDiscount ? 5.00 : 0.00;
+    const fidelityDiscountValue = Number(lido.fidelity_valore_sconto) || 5.00;
+    const discountAmount = hasFidelityDiscount ? fidelityDiscountValue : 0.00;
     const finalTotale = Math.max(0, totale - discountAmount);
 
     let umbrellaName = numero_ombrellone_manuale || null;
     if (hasFidelityDiscount && umbrellaName) {
-      umbrellaName = `${umbrellaName} [SCONTO PUNTI -5€]`;
+      umbrellaName = `${umbrellaName} [SCONTO PUNTI -${fidelityDiscountValue}€]`;
     }
 
     // 3. Crea l'ordine contanti nel database
@@ -146,7 +147,8 @@ export async function POST(request: Request) {
         totale: finalTotale,
         stato: 'inviato',
         metodo_pagamento: 'contanti',
-        stato_pagamento: 'in_attesa', // Per contanti rimane in attesa finché non viene pagato alla consegna
+        stato_pagamento: 'in_attesa',
+        cliente_fidelity_id: cliente_fidelity_id || null,
       })
       .select()
       .single();

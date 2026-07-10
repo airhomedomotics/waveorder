@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ShoppingBag, Plus, Minus, X, CreditCard, DollarSign, Check, HelpCircle, GlassWater, Coffee, UtensilsCrossed } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, X, CreditCard, DollarSign, Check, HelpCircle, GlassWater, Coffee, UtensilsCrossed, User, LogIn, UserPlus, LogOut } from 'lucide-react';
 
 interface Lido {
   id: string;
@@ -65,6 +65,23 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
   const [fidelityPoints, setFidelityPoints] = useState<number>(0);
   const [useFidelityDiscount, setUseFidelityDiscount] = useState(false);
 
+  // --- REGISTRAZIONE / LOGIN OSPITI ---
+  interface ClienteFidelity {
+    id: string;
+    nome: string;
+    cognome: string;
+    telefono: string;
+    punti_totali: number;
+  }
+  const [clienteFidelity, setClienteFidelity] = useState<ClienteFidelity | null>(null);
+  const [showAuthForm, setShowAuthForm] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authNome, setAuthNome] = useState('');
+  const [authCognome, setAuthCognome] = useState('');
+  const [authTelefono, setAuthTelefono] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
   const getPlaceholderIcon = (categoryName?: string) => {
     const name = (categoryName || '').toLowerCase();
     if (name.includes('drink') || name.includes('bevande') || name.includes('cocktail') || name.includes('birre') || name.includes('vino') || name.includes('liquori')) {
@@ -76,14 +93,99 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
     return <UtensilsCrossed className="w-8 h-8 text-indigo-400/60" />;
   };
 
+  // Carica profilo ospite da localStorage (se presente) o punti locali come fallback
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedPoints = localStorage.getItem(`waveorder_points_${lido.slug}`);
-      if (savedPoints) {
-        setFidelityPoints(parseInt(savedPoints, 10));
+      const savedClienteId = localStorage.getItem(`waveorder_cliente_${lido.slug}`);
+      if (savedClienteId) {
+        // Recupera profilo dal DB
+        fetch(`/api/clienti-fidelity?lido_id=${lido.id}&telefono=${encodeURIComponent(localStorage.getItem(`waveorder_telefono_${lido.slug}`) || '')}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.cliente) {
+              setClienteFidelity(data.cliente);
+              setFidelityPoints(data.cliente.punti_totali || 0);
+            }
+          })
+          .catch(() => {
+            // Fallback locale
+            const savedPoints = localStorage.getItem(`waveorder_points_${lido.slug}`);
+            if (savedPoints) setFidelityPoints(parseInt(savedPoints, 10));
+          });
+      } else {
+        // Nessun profilo salvato — usa localStorage come fallback
+        const savedPoints = localStorage.getItem(`waveorder_points_${lido.slug}`);
+        if (savedPoints) setFidelityPoints(parseInt(savedPoints, 10));
       }
     }
-  }, [lido.slug]);
+  }, [lido.slug, lido.id]);
+
+  // Gestione registrazione ospite
+  const handleAuthSubmit = async () => {
+    setAuthLoading(true);
+    setAuthError(null);
+
+    try {
+      if (authMode === 'register') {
+        if (!authNome.trim() || !authCognome.trim() || !authTelefono.trim()) {
+          setAuthError('Compila tutti i campi.');
+          setAuthLoading(false);
+          return;
+        }
+        const res = await fetch('/api/clienti-fidelity', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lido_id: lido.id,
+            nome: authNome.trim(),
+            cognome: authCognome.trim(),
+            telefono: authTelefono.trim(),
+          }),
+        });
+        const data = await res.json();
+        if (data.error) {
+          setAuthError(data.error);
+        } else {
+          setClienteFidelity(data.cliente);
+          setFidelityPoints(data.cliente.punti_totali || 0);
+          localStorage.setItem(`waveorder_cliente_${lido.slug}`, data.cliente.id);
+          localStorage.setItem(`waveorder_telefono_${lido.slug}`, data.cliente.telefono);
+          localStorage.setItem(`waveorder_points_${lido.slug}`, String(data.cliente.punti_totali || 0));
+          setShowAuthForm(false);
+        }
+      } else {
+        // Login
+        if (!authTelefono.trim()) {
+          setAuthError('Inserisci il tuo numero di telefono.');
+          setAuthLoading(false);
+          return;
+        }
+        const res = await fetch(`/api/clienti-fidelity?lido_id=${lido.id}&telefono=${encodeURIComponent(authTelefono.trim())}`);
+        const data = await res.json();
+        if (data.error) {
+          setAuthError('Nessun account trovato. Registrati per iniziare!');
+        } else {
+          setClienteFidelity(data.cliente);
+          setFidelityPoints(data.cliente.punti_totali || 0);
+          localStorage.setItem(`waveorder_cliente_${lido.slug}`, data.cliente.id);
+          localStorage.setItem(`waveorder_telefono_${lido.slug}`, data.cliente.telefono);
+          localStorage.setItem(`waveorder_points_${lido.slug}`, String(data.cliente.punti_totali || 0));
+          setShowAuthForm(false);
+        }
+      }
+    } catch {
+      setAuthError('Errore di rete. Riprova.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setClienteFidelity(null);
+    setFidelityPoints(0);
+    localStorage.removeItem(`waveorder_cliente_${lido.slug}`);
+    localStorage.removeItem(`waveorder_telefono_${lido.slug}`);
+  };
 
   // Filtra prodotti per categoria selezionata
   const filteredProducts = useMemo(() => {
@@ -161,6 +263,7 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
         note: item.note,
       })),
       fidelity_discount: useFidelityDiscount && fidelityPoints >= threshold,
+      cliente_fidelity_id: clienteFidelity?.id || null,
     };
 
     try {
@@ -198,7 +301,8 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
             localStorage.setItem(`waveorder_points_${lido.slug}`, String(newPoints));
           }
           // Reindirizza alla pagina di successo contanti
-          window.location.href = `/menu/${lido.slug}/success?order_id=${data.ordine.id}`;
+          const clienteParam = clienteFidelity?.id ? `&cliente_id=${clienteFidelity.id}` : '';
+          window.location.href = `/menu/${lido.slug}/success?order_id=${data.ordine.id}${clienteParam}`;
         }
       }
     } catch (err: any) {
@@ -238,32 +342,147 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
 
       {/* WIDGET RACCOLTA PUNTI FIDELITÀ (WAVECARD) */}
       {lido.fidelity_attivo && (
-        <div className="mx-4 md:mx-6 mt-4 p-4.5 bg-gradient-to-br from-indigo-950/35 to-slate-900/60 border border-indigo-500/25 rounded-3xl flex items-center justify-between gap-4">
-          <div>
-            <span className="block text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">La tua WaveCard</span>
-            <span className="block text-sm font-black text-slate-100">Fidelity Card Digitale</span>
-            <span className="block text-[10px] text-slate-400 mt-1">Acquista drink o cibo e accumula punti! (€1 = 1 Punto)</span>
-          </div>
-          <div className="text-right">
-            <div className="flex items-baseline justify-end gap-1">
-              <span className="text-3xl font-black text-indigo-400">{fidelityPoints}</span>
-              <span className="text-xs text-slate-500 font-bold">PTS</span>
+        <div className="mx-4 md:mx-6 mt-4">
+          {clienteFidelity ? (
+            /* === CLIENTE AUTENTICATO === */
+            <div className="p-4.5 bg-gradient-to-br from-indigo-950/35 to-slate-900/60 border border-indigo-500/25 rounded-3xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="block text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">La tua WaveCard</span>
+                  <span className="block text-sm font-black text-slate-100">{clienteFidelity.nome} {clienteFidelity.cognome}</span>
+                  <span className="block text-[10px] text-slate-400 mt-0.5">Tel. {clienteFidelity.telefono}</span>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-baseline justify-end gap-1">
+                    <span className="text-3xl font-black text-indigo-400">{fidelityPoints}</span>
+                    <span className="text-xs text-slate-500 font-bold">PTS</span>
+                  </div>
+                  {(() => {
+                    const threshold = lido.fidelity_soglia_punti || 100;
+                    const value = Number(lido.fidelity_valore_sconto || 5);
+                    if (fidelityPoints >= threshold) {
+                      return (
+                        <span className="inline-block bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-2 py-0.5 rounded-full mt-1.5 animate-pulse">
+                          Sconto {value.toFixed(0)}€ Pronto!
+                        </span>
+                      );
+                    }
+                    return (
+                      <p className="text-[9px] text-slate-500 mt-1">Mancano {threshold - fidelityPoints} pt allo sconto</p>
+                    );
+                  })()}
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="mt-3 flex items-center gap-1.5 text-[10px] text-slate-500 hover:text-red-400 transition-colors"
+              >
+                <LogOut className="w-3 h-3" />
+                Disconnetti WaveCard
+              </button>
             </div>
-            {(() => {
-              const threshold = lido.fidelity_soglia_punti || 100;
-              const value = Number(lido.fidelity_valore_sconto || 5);
-              if (fidelityPoints >= threshold) {
-                return (
-                  <span className="inline-block bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-2 py-0.5 rounded-full mt-1.5 animate-pulse">
-                    Sconto {value.toFixed(0)}€ Pronto!
-                  </span>
-                );
-              }
-              return (
-                <p className="text-[9px] text-slate-500 mt-1">Mancano {threshold - fidelityPoints} pt allo sconto</p>
-              );
-            })()}
-          </div>
+          ) : showAuthForm ? (
+            /* === FORM REGISTRAZIONE / LOGIN === */
+            <div className="p-5 bg-gradient-to-br from-indigo-950/35 to-slate-900/60 border border-indigo-500/25 rounded-3xl space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black text-slate-100">
+                  {authMode === 'register' ? 'Crea la tua WaveCard' : 'Accedi alla WaveCard'}
+                </h3>
+                <button onClick={() => setShowAuthForm(false)} className="p-1 text-slate-500 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Toggle Login/Register */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => { setAuthMode('login'); setAuthError(null); }}
+                  className={`text-xs font-bold py-2 rounded-xl transition-all ${
+                    authMode === 'login'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-800/50 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <LogIn className="w-3.5 h-3.5 inline mr-1" />
+                  Accedi
+                </button>
+                <button
+                  onClick={() => { setAuthMode('register'); setAuthError(null); }}
+                  className={`text-xs font-bold py-2 rounded-xl transition-all ${
+                    authMode === 'register'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-800/50 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <UserPlus className="w-3.5 h-3.5 inline mr-1" />
+                  Registrati
+                </button>
+              </div>
+
+              {/* Form Fields */}
+              {authMode === 'register' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    placeholder="Nome"
+                    value={authNome}
+                    onChange={(e) => setAuthNome(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Cognome"
+                    value={authCognome}
+                    onChange={(e) => setAuthCognome(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                </div>
+              )}
+
+              <input
+                type="tel"
+                placeholder="Numero di telefono"
+                value={authTelefono}
+                onChange={(e) => setAuthTelefono(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+
+              {authError && (
+                <p className="text-xs text-red-400 font-medium">{authError}</p>
+              )}
+
+              <button
+                onClick={handleAuthSubmit}
+                disabled={authLoading}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {authLoading ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                ) : (
+                  <>
+                    {authMode === 'register' ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+                    {authMode === 'register' ? 'Crea WaveCard' : 'Accedi'}
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            /* === BANNER INVITO REGISTRAZIONE === */
+            <div className="p-4.5 bg-gradient-to-br from-indigo-950/35 to-slate-900/60 border border-indigo-500/25 rounded-3xl flex items-center justify-between gap-4">
+              <div>
+                <span className="block text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">WaveCard</span>
+                <span className="block text-sm font-black text-slate-100">Fidelity Card Digitale</span>
+                <span className="block text-[10px] text-slate-400 mt-1">Registrati per accumulare punti tutta la stagione!</span>
+              </div>
+              <button
+                onClick={() => { setShowAuthForm(true); setAuthMode('register'); }}
+                className="shrink-0 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 flex items-center gap-1.5"
+              >
+                <User className="w-4 h-4" />
+                Iscriviti
+              </button>
+            </div>
+          )}
         </div>
       )}
 

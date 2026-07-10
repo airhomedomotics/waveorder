@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient();
     const body = await request.json();
-    const { lido_id, ombrellone_id, numero_ombrellone_manuale, items, fidelity_discount } = body;
+    const { lido_id, ombrellone_id, numero_ombrellone_manuale, items, fidelity_discount, cliente_fidelity_id } = body;
 
     if (!lido_id || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Dati carrello non validi' }, { status: 400 });
@@ -78,14 +78,15 @@ export async function POST(request: Request) {
       });
     }
 
-    // Applica Sconto Punti Fidelity
+    // Applica Sconto Punti Fidelity (dinamico da impostazioni lido)
     const hasFidelityDiscount = fidelity_discount === true;
-    const discountAmount = hasFidelityDiscount ? 5.00 : 0.00;
+    const fidelityDiscountValue = Number(lido.fidelity_valore_sconto) || 5.00;
+    const discountAmount = hasFidelityDiscount ? fidelityDiscountValue : 0.00;
     const finalTotale = Math.max(0, totale - discountAmount);
 
     let umbrellaName = numero_ombrellone_manuale || null;
     if (hasFidelityDiscount && umbrellaName) {
-      umbrellaName = `${umbrellaName} [SCONTO PUNTI -5€]`;
+      umbrellaName = `${umbrellaName} [SCONTO PUNTI -${fidelityDiscountValue}€]`;
     }
 
     // 3. Crea l'ordine pendente nel database
@@ -99,6 +100,7 @@ export async function POST(request: Request) {
         stato: 'inviato',
         metodo_pagamento: 'carta_stripe',
         stato_pagamento: 'in_attesa',
+        cliente_fidelity_id: cliente_fidelity_id || null,
       })
       .select()
       .single();
@@ -143,7 +145,7 @@ export async function POST(request: Request) {
     let discountCouponId = undefined;
     if (hasFidelityDiscount && finalTotale > 0) {
       const coupon = await stripe.coupons.create({
-        amount_off: 500, // 5€ sconto
+        amount_off: Math.round(fidelityDiscountValue * 100),
         currency: 'eur',
         duration: 'once',
       });
@@ -151,7 +153,8 @@ export async function POST(request: Request) {
     }
 
     // 5. Crea la sessione di checkout Stripe Connect
-    const successUrl = `${process.env.NEXT_PUBLIC_APP_URL}/menu/${lido.slug}/success?order_id=${ordine.id}`;
+    const clienteParam = cliente_fidelity_id ? `&cliente_id=${cliente_fidelity_id}` : '';
+    const successUrl = `${process.env.NEXT_PUBLIC_APP_URL}/menu/${lido.slug}/success?order_id=${ordine.id}${clienteParam}`;
     const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}/menu/${lido.slug}/checkout?cancel=true`;
 
     const checkoutParams: Stripe.Checkout.SessionCreateParams = {

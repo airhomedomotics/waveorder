@@ -45,11 +45,19 @@ export default async function LidoAdminDashboardPage() {
     .select('importo_commissione')
     .eq('lido_id', gestore.lido_id);
 
+  // - Clienti fidelity registrati
+  const { data: clientiFidelity } = await supabase
+    .from('clienti_fidelity')
+    .select('*')
+    .eq('lido_id', gestore.lido_id)
+    .order('punti_totali', { ascending: false });
+
   return (
     <LidoAdminClient
       lido={lido!}
       orders={orders || []}
       cashCommissions={cashCommissions || []}
+      clientiFidelity={clientiFidelity || []}
     />
   );
 }
