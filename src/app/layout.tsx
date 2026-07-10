@@ -27,7 +27,24 @@ export default function RootLayout({
       lang="it"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                    console.log('ServiceWorker registered with scope: ', reg.scope);
+                  }).catch(function(err) {
+                    console.error('ServiceWorker registration failed: ', err);
+                  });
+                });
+              }
+            `
+          }}
+        />
+      </body>
     </html>
   );
 }

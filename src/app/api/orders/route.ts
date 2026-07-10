@@ -72,7 +72,7 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient();
     const body = await request.json();
-    const { lido_id, ombrellone_id, numero_ombrellone_manuale, items } = body;
+    const { lido_id, ombrellone_id, numero_ombrellone_manuale, items, fidelity_discount } = body;
 
     if (!lido_id || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Dati carrello non validi' }, { status: 400 });
@@ -126,14 +126,24 @@ export async function POST(request: Request) {
       });
     }
 
+    // Applica lo Sconto Fedeltà (5€ per 100 Punti)
+    const hasFidelityDiscount = fidelity_discount === true;
+    const discountAmount = hasFidelityDiscount ? 5.00 : 0.00;
+    const finalTotale = Math.max(0, totale - discountAmount);
+
+    let umbrellaName = numero_ombrellone_manuale || null;
+    if (hasFidelityDiscount && umbrellaName) {
+      umbrellaName = `${umbrellaName} [SCONTO PUNTI -5€]`;
+    }
+
     // 3. Crea l'ordine contanti nel database
     const { data: ordine, error: orderError } = await supabase
       .from('ordini')
       .insert({
         lido_id,
         ombrellone_id: ombrellone_id || null,
-        numero_ombrellone_manuale: numero_ombrellone_manuale || null,
-        totale,
+        numero_ombrellone_manuale: umbrellaName,
+        totale: finalTotale,
         stato: 'inviato',
         metodo_pagamento: 'contanti',
         stato_pagamento: 'in_attesa', // Per contanti rimane in attesa finché non viene pagato alla consegna

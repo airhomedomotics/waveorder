@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient();
     const body = await request.json();
-    const { lido_id, ombrellone_id, numero_ombrellone_manuale, items } = body;
+    const { lido_id, ombrellone_id, numero_ombrellone_manuale, items, fidelity_discount } = body;
 
     if (!lido_id || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Dati carrello non validi' }, { status: 400 });
@@ -78,14 +78,24 @@ export async function POST(request: Request) {
       });
     }
 
+    // Applica Sconto Punti Fidelity
+    const hasFidelityDiscount = fidelity_discount === true;
+    const discountAmount = hasFidelityDiscount ? 5.00 : 0.00;
+    const finalTotale = Math.max(0, totale - discountAmount);
+
+    let umbrellaName = numero_ombrellone_manuale || null;
+    if (hasFidelityDiscount && umbrellaName) {
+      umbrellaName = `${umbrellaName} [SCONTO PUNTI -5€]`;
+    }
+
     // 3. Crea l'ordine pendente nel database
     const { data: ordine, error: orderError } = await supabase
       .from('ordini')
       .insert({
         lido_id,
         ombrellone_id: ombrellone_id || null,
-        numero_ombrellone_manuale: numero_ombrellone_manuale || null,
-        totale,
+        numero_ombrellone_manuale: umbrellaName,
+        totale: finalTotale,
         stato: 'inviato',
         metodo_pagamento: 'carta_stripe',
         stato_pagamento: 'in_attesa',
@@ -113,20 +123,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Errore nel salvataggio dei dettagli ordine' }, { status: 500 });
     }
 
-    // 4. Calcola l'application fee (commissione per la piattaforma) in base al contratto
+    // 4. Calcola l'application fee (commissione per la piattaforma) in base al contratto sul totale scontato
     let feeAmountInCents = 0;
     const commissionePercentuale = Number(lido.quota_commissione_percentuale);
 
     if (lido.tipo_contratto === 'commissione_piena' || lido.tipo_contratto === 'ibrido') {
       if (commissionePercentuale > 0) {
-        feeAmountInCents = Math.round(totale * (commissionePercentuale / 100) * 100);
+        feeAmountInCents = Math.round(finalTotale * (commissionePercentuale / 100) * 100);
       }
     }
 
-    // Assicurati che la fee non superi il totale
-    const maxFee = Math.round(totale * 100);
+    // Assicurati che la fee non superi il totale scontato
+    const maxFee = Math.round(finalTotale * 100);
     if (feeAmountInCents > maxFee) {
       feeAmountInCents = maxFee;
+    }
+
+    // Genera coupon Stripe temporaneo per applicare lo sconto nel checkout ospitato
+    let discountCouponId = undefined;
+    if (hasFidelityDiscount && finalTotale > 0) {
+      const coupon = await stripe.coupons.create({
+        amount_off: 500, // 5€ sconto
+        currency: 'eur',
+        duration: 'once',
+      });
+      discountCouponId = coupon.id;
     }
 
     // 5. Crea la sessione di checkout Stripe Connect
@@ -138,6 +159,7 @@ export async function POST(request: Request) {
       line_items: lineItems,
       success_url: successUrl,
       cancel_url: cancelUrl,
+      discounts: discountCouponId ? [{ coupon: discountCouponId }] : undefined,
       metadata: {
         ordine_id: ordine.id,
         lido_id: lido.id,

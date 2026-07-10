@@ -41,7 +41,42 @@ interface SuccessClientProps {
 
 export default function SuccessClient({ lido, initialOrder }: SuccessClientProps) {
   const [order, setOrder] = useState<Order>(initialOrder);
+  const [pointsEarned, setPointsEarned] = useState(0);
+  const [newTotalPoints, setNewTotalPoints] = useState(0);
   const supabase = createClient();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const earned = Math.floor(Number(order.totale));
+      setPointsEarned(earned);
+
+      const pointsKey = `waveorder_points_${lido.slug}`;
+      const hasAddedKey = `points_added_${order.id}`;
+
+      const hasAdded = localStorage.getItem(hasAddedKey);
+      const savedPoints = localStorage.getItem(pointsKey);
+      let currentPoints = 0;
+      if (savedPoints) {
+        currentPoints = parseInt(savedPoints, 10);
+      }
+
+      // Se l'ordine conteneva lo sconto punti, dobbiamo sottrarre 100 punti!
+      const isDiscounted = order.numero_ombrellone_manuale?.includes('[SCONTO PUNTI]');
+
+      if (!hasAdded) {
+        let updatedPoints = currentPoints + earned;
+        if (isDiscounted) {
+          // Sottrai 100 punti spesi per lo sconto
+          updatedPoints = Math.max(0, updatedPoints - 100);
+        }
+        localStorage.setItem(pointsKey, String(updatedPoints));
+        localStorage.setItem(hasAddedKey, 'true');
+        setNewTotalPoints(updatedPoints);
+      } else {
+        setNewTotalPoints(currentPoints);
+      }
+    }
+  }, [order.id, order.totale, order.numero_ombrellone_manuale, lido.slug]);
 
   useEffect(() => {
     // Sottoscrizione realtime ai cambiamenti di stato dell'ordine corrente
@@ -143,6 +178,19 @@ export default function SuccessClient({ lido, initialOrder }: SuccessClientProps
             <p className="text-xs text-slate-300 mt-1 leading-relaxed">{currentStatus.desc}</p>
           </div>
         </div>
+
+        {/* WIDGET FIDELITY RACCOLTA PUNTI (WaveCard) */}
+        {pointsEarned > 0 && order.stato !== 'annullato' && (
+          <div className="mt-6 p-4 bg-gradient-to-br from-indigo-950/25 to-slate-900/40 border border-indigo-500/25 rounded-3xl text-center">
+            <span className="block text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1.5">WaveCard Programma Fedeltà</span>
+            <span className="block text-xs text-slate-300">Con questo ordine hai guadagnato: <strong className="text-white">+{pointsEarned} Punti</strong></span>
+            <div className="flex items-baseline justify-center gap-1.5 mt-3">
+              <span className="text-3xl font-black text-indigo-400">{newTotalPoints}</span>
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Punti Totali Accumulati</span>
+            </div>
+            <p className="text-[9px] text-slate-500 mt-2 font-medium">Ogni 100 Punti ricevi 5.00€ di Sconto sui prossimi ordini!</p>
+          </div>
+        )}
 
         {/* PROGRESS STEPPER (Nessuna visualizzazione se annullato) */}
         {order.stato !== 'annullato' && (
