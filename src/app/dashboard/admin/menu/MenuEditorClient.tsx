@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, ArrowLeft, Layers, Coffee, Check, X, Upload } from 'lucide-react';
+import { Plus, Edit2, Trash2, ArrowLeft, Layers, Coffee, Check, X, Upload, GlassWater, UtensilsCrossed } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ShoppingBag, Plus, Minus, X, CreditCard, DollarSign, Check, HelpCircle } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, X, CreditCard, DollarSign, Check, HelpCircle, GlassWater, Coffee, UtensilsCrossed } from 'lucide-react';
 
 interface Lido {
   id: string;
@@ -64,6 +64,17 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
   // Programma Fedeltà (WaveCard)
   const [fidelityPoints, setFidelityPoints] = useState<number>(0);
   const [useFidelityDiscount, setUseFidelityDiscount] = useState(false);
+
+  const getPlaceholderIcon = (categoryName?: string) => {
+    const name = (categoryName || '').toLowerCase();
+    if (name.includes('drink') || name.includes('bevande') || name.includes('cocktail') || name.includes('birre') || name.includes('vino') || name.includes('liquori')) {
+      return <GlassWater className="w-8 h-8 text-indigo-400/60" />;
+    }
+    if (name.includes('caffè') || name.includes('colazione') || name.includes('coffee') || name.includes('bar')) {
+      return <Coffee className="w-8 h-8 text-indigo-400/60" />;
+    }
+    return <UtensilsCrossed className="w-8 h-8 text-indigo-400/60" />;
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -302,8 +313,12 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
             const qty = getProductCartQty(product.id);
             return (
               <div key={product.id} className="bg-slate-800/25 backdrop-blur-md border border-slate-800/60 rounded-3xl p-4 flex gap-4 transition-all duration-300 hover:border-slate-700/40">
-                {product.immagine_url && (
-                  <img src={product.immagine_url} alt={product.nome} className="w-20 h-20 rounded-2xl object-cover border border-slate-700/60 flex-shrink-0" />
+                {product.immagine_url ? (
+                  <img src={product.immagine_url} alt={product.nome} className="w-20 h-20 rounded-2xl object-cover border border-slate-700/60 flex-shrink-0 bg-slate-900" />
+                ) : (
+                  <div className="w-20 h-20 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center flex-shrink-0">
+                    {getPlaceholderIcon(categories.find((c) => c.id === product.categoria_id)?.nome)}
+                  </div>
                 )}
                 <div className="flex-1 flex flex-col justify-between min-w-0">
                   <div>
