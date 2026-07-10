@@ -12,11 +12,13 @@ export default async function MenuEditorPage() {
   }
 
   // 2. Mappa gestore
-  const { data: gestore, error: gestoreError } = await supabase
+  const { data: gestoreList, error: gestoreError } = await supabase
     .from('lidi_gestori')
     .select('lido_id, ruolo')
     .eq('user_id', user.id)
-    .single();
+    .limit(1);
+
+  const gestore = gestoreList?.[0];
 
   if (gestoreError || !gestore || gestore.ruolo !== 'admin') {
     redirect('/dashboard/orders');

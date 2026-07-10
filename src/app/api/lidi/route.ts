@@ -31,11 +31,13 @@ export async function GET(request: Request) {
     }
 
     // Ottieni il lido a cui appartiene il gestore
-    const { data: gestoreData, error: gestoreError } = await supabase
+    const { data: gestoreList, error: gestoreError } = await supabase
       .from('lidi_gestori')
       .select('lido_id')
       .eq('user_id', user.id)
-      .single();
+      .limit(1);
+
+    const gestoreData = gestoreList?.[0];
 
     if (gestoreError || !gestoreData) {
       return NextResponse.json({ error: 'Nessun lido associato a questo account' }, { status: 404 });
@@ -144,11 +146,13 @@ export async function PUT(request: Request) {
     }
 
     // Recupera lido dell'utente
-    const { data: gestoreData, error: gestoreError } = await supabase
+    const { data: gestoreList, error: gestoreError } = await supabase
       .from('lidi_gestori')
       .select('lido_id, ruolo')
       .eq('user_id', user.id)
-      .single();
+      .limit(1);
+
+    const gestoreData = gestoreList?.[0];
 
     if (gestoreError || !gestoreData) {
       return NextResponse.json({ error: 'Nessun lido associato a questo account' }, { status: 404 });

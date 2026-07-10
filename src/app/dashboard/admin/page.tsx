@@ -12,11 +12,13 @@ export default async function LidoAdminDashboardPage() {
   }
 
   // 2. Mappa l'utente gestore al lido
-  const { data: gestore, error: gestoreError } = await supabase
+  const { data: gestoreList, error: gestoreError } = await supabase
     .from('lidi_gestori')
     .select('lido_id, ruolo')
     .eq('user_id', user.id)
-    .single();
+    .limit(1);
+
+  const gestore = gestoreList?.[0];
 
   if (gestoreError || !gestore || gestore.ruolo !== 'admin') {
     // Solo gli amministratori del lido possono accedere al pannello di gestione impostazioni

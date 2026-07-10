@@ -12,11 +12,13 @@ export default async function DashboardOrdersPage() {
   }
 
   // Verifica che l'utente sia associato a un lido
-  const { data: gestore, error: gestoreError } = await supabase
+  const { data: gestoreList, error: gestoreError } = await supabase
     .from('lidi_gestori')
     .select('lido_id')
     .eq('user_id', user.id)
-    .single();
+    .limit(1);
+
+  const gestore = gestoreList?.[0];
 
   if (gestoreError || !gestore) {
     // Se non ha un lido, reindirizzalo all'onboarding
