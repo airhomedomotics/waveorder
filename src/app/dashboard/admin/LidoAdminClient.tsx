@@ -15,6 +15,9 @@ interface Lido {
   accetta_contanti: boolean;
   pagamenti_digitali_attivi: boolean;
   stripe_account_id: string | null;
+  fidelity_attivo: boolean;
+  fidelity_soglia_punti: number;
+  fidelity_valore_sconto: number | string;
 }
 
 interface Order {
@@ -42,6 +45,9 @@ export default function LidoAdminClient({ lido, orders, cashCommissions }: LidoA
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [fidelityAttivo, setFidelityAttivo] = useState(lido.fidelity_attivo !== undefined ? lido.fidelity_attivo : true);
+  const [fidelitySogliaPunti, setFidelitySogliaPunti] = useState(lido.fidelity_soglia_punti || 100);
+  const [fidelityValoreSconto, setFidelityValoreSconto] = useState(Number(lido.fidelity_valore_sconto) || 5.00);
   const supabase = createClient();
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,6 +118,9 @@ export default function LidoAdminClient({ lido, orders, cashCommissions }: LidoA
           logo_url: logoUrl || null,
           colore_primario: colorePrimario,
           accetta_contanti: accettaContanti,
+          fidelity_attivo: fidelityAttivo,
+          fidelity_soglia_punti: Number(fidelitySogliaPunti),
+          fidelity_valore_sconto: Number(fidelityValoreSconto),
         }),
       });
 
@@ -307,6 +316,54 @@ export default function LidoAdminClient({ lido, orders, cashCommissions }: LidoA
                   <p>
                     <strong>Opzione Contanti Sospesa Automaticamente:</strong> Il tuo tasso di cancellazione ordini contanti negli ultimi 7 giorni ({stats.cashCancelRate.toFixed(1)}%) supera il limite del 10%. Per sbloccare l'opzione contatti contatta l'assistenza.
                   </p>
+                </div>
+              )}
+            </div>
+
+            {/* CONFIGURAZIONE RACCOLTA PUNTI (FIDELITY CARD) */}
+            <div className="p-4 bg-slate-950 border border-slate-900 rounded-2xl space-y-4">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-900">
+                <div>
+                  <h4 className="font-bold text-sm">Abilita Raccolta Punti Fedeltà</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">Attiva la WaveCard digitale per i tuoi clienti</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={fidelityAttivo}
+                  onChange={(e) => setFidelityAttivo(e.target.checked)}
+                  className="w-5 h-5 rounded border-slate-800 text-indigo-650 bg-slate-950 focus:ring-indigo-500/50 cursor-pointer"
+                />
+              </div>
+
+              {fidelityAttivo && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Soglia Punti per Premio</label>
+                    <input
+                      type="number"
+                      required
+                      min="10"
+                      value={fidelitySogliaPunti}
+                      onChange={(e) => setFidelitySogliaPunti(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      placeholder="Es. 100"
+                    />
+                    <p className="text-[10px] text-slate-500">I punti necessari per sbloccare lo sconto (es. 100 punti).</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Valore Sconto (€)</label>
+                    <input
+                      type="number"
+                      required
+                      min="0.50"
+                      step="0.50"
+                      value={fidelityValoreSconto}
+                      onChange={(e) => setFidelityValoreSconto(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      placeholder="Es. 5.00"
+                    />
+                    <p className="text-[10px] text-slate-500">Il valore monetario dello sconto applicato alla soglia (es. 5€).</p>
+                  </div>
                 </div>
               )}
             </div>

@@ -165,7 +165,10 @@ export async function PUT(request: Request) {
       colore_primario,
       accetta_contanti,
       stripe_account_id,
-      pagamenti_digitali_attivi
+      pagamenti_digitali_attivi,
+      fidelity_attivo,
+      fidelity_soglia_punti,
+      fidelity_valore_sconto
     } = body;
 
     // Crea oggetto di aggiornamento
@@ -176,6 +179,9 @@ export async function PUT(request: Request) {
     if (accetta_contanti !== undefined) updateData.accetta_contanti = accetta_contanti;
     if (stripe_account_id !== undefined) updateData.stripe_account_id = stripe_account_id;
     if (pagamenti_digitali_attivi !== undefined) updateData.pagamenti_digitali_attivi = pagamenti_digitali_attivi;
+    if (fidelity_attivo !== undefined) updateData.fidelity_attivo = fidelity_attivo;
+    if (fidelity_soglia_punti !== undefined) updateData.fidelity_soglia_punti = fidelity_soglia_punti;
+    if (fidelity_valore_sconto !== undefined) updateData.fidelity_valore_sconto = fidelity_valore_sconto;
 
     const { data: lido, error: updateError } = await supabase
       .from('lidi')

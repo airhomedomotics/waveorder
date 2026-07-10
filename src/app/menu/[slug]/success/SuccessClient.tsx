@@ -9,6 +9,9 @@ interface Lido {
   nome_struttura: string;
   slug: string;
   colore_primario: string;
+  fidelity_attivo: boolean;
+  fidelity_soglia_punti: number;
+  fidelity_valore_sconto: number | string;
 }
 
 interface OrderDetail {
@@ -60,14 +63,15 @@ export default function SuccessClient({ lido, initialOrder }: SuccessClientProps
         currentPoints = parseInt(savedPoints, 10);
       }
 
-      // Se l'ordine conteneva lo sconto punti, dobbiamo sottrarre 100 punti!
+      // Se l'ordine conteneva lo sconto punti, dobbiamo sottrarre la soglia punti spesa!
       const isDiscounted = order.numero_ombrellone_manuale?.includes('[SCONTO PUNTI]');
+      const threshold = lido.fidelity_soglia_punti || 100;
 
       if (!hasAdded) {
         let updatedPoints = currentPoints + earned;
         if (isDiscounted) {
-          // Sottrai 100 punti spesi per lo sconto
-          updatedPoints = Math.max(0, updatedPoints - 100);
+          // Sottrai punti spesi per lo sconto
+          updatedPoints = Math.max(0, updatedPoints - threshold);
         }
         localStorage.setItem(pointsKey, String(updatedPoints));
         localStorage.setItem(hasAddedKey, 'true');
@@ -180,7 +184,7 @@ export default function SuccessClient({ lido, initialOrder }: SuccessClientProps
         </div>
 
         {/* WIDGET FIDELITY RACCOLTA PUNTI (WaveCard) */}
-        {pointsEarned > 0 && order.stato !== 'annullato' && (
+        {lido.fidelity_attivo && pointsEarned > 0 && order.stato !== 'annullato' && (
           <div className="mt-6 p-4 bg-gradient-to-br from-indigo-950/25 to-slate-900/40 border border-indigo-500/25 rounded-3xl text-center">
             <span className="block text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1.5">WaveCard Programma Fedeltà</span>
             <span className="block text-xs text-slate-300">Con questo ordine hai guadagnato: <strong className="text-white">+{pointsEarned} Punti</strong></span>
@@ -188,7 +192,7 @@ export default function SuccessClient({ lido, initialOrder }: SuccessClientProps
               <span className="text-3xl font-black text-indigo-400">{newTotalPoints}</span>
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Punti Totali Accumulati</span>
             </div>
-            <p className="text-[9px] text-slate-500 mt-2 font-medium">Ogni 100 Punti ricevi 5.00€ di Sconto sui prossimi ordini!</p>
+            <p className="text-[9px] text-slate-500 mt-2 font-medium">Ogni {lido.fidelity_soglia_punti || 100} Punti ricevi {Number(lido.fidelity_valore_sconto || 5).toFixed(2)}€ di Sconto sui prossimi ordini!</p>
           </div>
         )}
 

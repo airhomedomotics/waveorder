@@ -11,6 +11,9 @@ interface Lido {
   colore_primario: string;
   accetta_contanti: boolean;
   pagamenti_digitali_attivi: boolean;
+  fidelity_attivo: boolean;
+  fidelity_soglia_punti: number;
+  fidelity_valore_sconto: number | string;
 }
 
 interface Ombrellone {
@@ -84,11 +87,13 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
   }, [cart]);
 
   const discountAmount = useMemo(() => {
-    if (useFidelityDiscount && fidelityPoints >= 100) {
-      return 5.00;
+    const threshold = lido.fidelity_soglia_punti || 100;
+    const value = Number(lido.fidelity_valore_sconto) || 5.00;
+    if (useFidelityDiscount && fidelityPoints >= threshold) {
+      return value;
     }
     return 0;
-  }, [useFidelityDiscount, fidelityPoints]);
+  }, [useFidelityDiscount, fidelityPoints, lido.fidelity_soglia_punti, lido.fidelity_valore_sconto]);
 
   const finalTotal = useMemo(() => {
     return Math.max(0, cartTotal - discountAmount);
@@ -134,6 +139,7 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
     setIsSubmitting(true);
     setErrorMsg(null);
 
+    const threshold = lido.fidelity_soglia_punti || 100;
     const payload = {
       lido_id: lido.id,
       ombrellone_id: initialOmbrellone?.id || null,
@@ -143,7 +149,7 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
         quantita: item.quantita,
         note: item.note,
       })),
-      fidelity_discount: useFidelityDiscount && fidelityPoints >= 100,
+      fidelity_discount: useFidelityDiscount && fidelityPoints >= threshold,
     };
 
     try {
@@ -175,8 +181,8 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
           setErrorMsg(data.error);
         } else if (data.ordine) {
           // Detrai i punti immediatamente se l'ordine in contanti ha avuto successo
-          if (useFidelityDiscount && fidelityPoints >= 100) {
-            const newPoints = Math.max(0, fidelityPoints - 100);
+          if (useFidelityDiscount && fidelityPoints >= threshold) {
+            const newPoints = Math.max(0, fidelityPoints - threshold);
             setFidelityPoints(newPoints);
             localStorage.setItem(`waveorder_points_${lido.slug}`, String(newPoints));
           }
@@ -219,27 +225,36 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
         </div>
       </header>
 
-      {/* WIDGET RACCOLTA PUNTI FIDELITÀ (PWA APP CARD) */}
-      <div className="mx-4 md:mx-6 mt-4 p-4.5 bg-gradient-to-br from-indigo-950/35 to-slate-900/60 border border-indigo-500/25 rounded-3xl flex items-center justify-between gap-4">
-        <div>
-          <span className="block text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">La tua WaveCard</span>
-          <span className="block text-sm font-black text-slate-100">Fidelity Card Digitale</span>
-          <span className="block text-[10px] text-slate-400 mt-1">Acquista drink o cibo e accumula punti! (€1 = 1 Punto)</span>
-        </div>
-        <div className="text-right">
-          <div className="flex items-baseline justify-end gap-1">
-            <span className="text-3xl font-black text-indigo-400">{fidelityPoints}</span>
-            <span className="text-xs text-slate-500 font-bold">PTS</span>
+      {/* WIDGET RACCOLTA PUNTI FIDELITÀ (WAVECARD) */}
+      {lido.fidelity_attivo && (
+        <div className="mx-4 md:mx-6 mt-4 p-4.5 bg-gradient-to-br from-indigo-950/35 to-slate-900/60 border border-indigo-500/25 rounded-3xl flex items-center justify-between gap-4">
+          <div>
+            <span className="block text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">La tua WaveCard</span>
+            <span className="block text-sm font-black text-slate-100">Fidelity Card Digitale</span>
+            <span className="block text-[10px] text-slate-400 mt-1">Acquista drink o cibo e accumula punti! (€1 = 1 Punto)</span>
           </div>
-          {fidelityPoints >= 100 ? (
-            <span className="inline-block bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-2 py-0.5 rounded-full mt-1.5 animate-pulse">
-              Sconto 5€ Pronto!
-            </span>
-          ) : (
-            <p className="text-[9px] text-slate-500 mt-1">Mancano {100 - fidelityPoints} pt allo sconto</p>
-          )}
+          <div className="text-right">
+            <div className="flex items-baseline justify-end gap-1">
+              <span className="text-3xl font-black text-indigo-400">{fidelityPoints}</span>
+              <span className="text-xs text-slate-500 font-bold">PTS</span>
+            </div>
+            {(() => {
+              const threshold = lido.fidelity_soglia_punti || 100;
+              const value = Number(lido.fidelity_valore_sconto || 5);
+              if (fidelityPoints >= threshold) {
+                return (
+                  <span className="inline-block bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-2 py-0.5 rounded-full mt-1.5 animate-pulse">
+                    Sconto {value.toFixed(0)}€ Pronto!
+                  </span>
+                );
+              }
+              return (
+                <p className="text-[9px] text-slate-500 mt-1">Mancano {threshold - fidelityPoints} pt allo sconto</p>
+              );
+            })()}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* BANNER SE OMBRELLONE NON PRECOMPILATO */}
       {!initialOmbrellone && (
@@ -447,11 +462,11 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
               </div>
 
               {/* ACCUMULO / RISCATTO PUNTI IN CHECKOUT */}
-              {fidelityPoints >= 100 && (
+              {lido.fidelity_attivo && fidelityPoints >= (lido.fidelity_soglia_punti || 100) && (
                 <div className="mt-5 p-4 bg-indigo-950/20 border border-indigo-500/20 rounded-2xl flex items-center justify-between">
                   <div className="flex-1 pr-4">
                     <h4 className="font-extrabold text-sm text-indigo-400">Riscatta Premio Fedeltà</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">Usa 100 punti per ottenere 5.00€ di Sconto immediato!</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Usa {lido.fidelity_soglia_punti || 100} punti per ottenere {Number(lido.fidelity_valore_sconto || 5).toFixed(2)}€ di Sconto immediato!</p>
                   </div>
                   <input
                     type="checkbox"
@@ -505,8 +520,8 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
                     <span>€{cartTotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-emerald-400 font-bold">
-                    <span>Sconto Fedeltà (Riscatto 100 pt):</span>
-                    <span>-€5.00</span>
+                    <span>Sconto Fedeltà (Riscatto {lido.fidelity_soglia_punti || 100} pt):</span>
+                    <span>-€{discountAmount.toFixed(2)}</span>
                   </div>
                 </div>
               )}
