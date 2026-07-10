@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Shield, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Shield, Mail, Lock, ArrowRight, Store, Sparkles } from 'lucide-react';
 
 export default function LoginClient() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [nomeLido, setNomeLido] = useState('');
+  const [tipoContratto, setTipoContratto] = useState('commissione_5');
   const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [msg, setMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
@@ -22,22 +24,29 @@ export default function LoginClient() {
 
     try {
       if (isSignUp) {
-        // Registrazione
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
+        // Registrazione Lido + Gestore tramite API dedicata
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            password,
+            nome_lido: nomeLido,
+            tipo_contratto: tipoContratto,
+          }),
         });
 
-        if (error) {
-          setMsg({ type: 'error', text: error.message });
+        const data = await res.json();
+        if (data.error) {
+          setMsg({ type: 'error', text: data.error });
         } else {
           setMsg({
             type: 'success',
-            text: 'Registrazione completata! Controlla la tua email per confermare l\'account (o accedi direttamente se la conferma email è disattivata su Supabase).',
+            text: 'Stabilimento registrato con successo! Ora puoi accedere direttamente inserendo le tue credenziali.',
           });
+          // Resetta i campi di registrazione e passa alla schermata di accesso
+          setNomeLido('');
+          setIsSignUp(false);
         }
       } else {
         // Accesso
@@ -114,6 +123,41 @@ export default function LoginClient() {
         )}
 
         <form onSubmit={handleAuth} className="space-y-4">
+          {isSignUp && (
+            <>
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Nome del Lido / Stabilimento</label>
+                <div className="relative">
+                  <Store className="w-4 h-4 text-slate-500 absolute left-4 top-3.5" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Es. Lido Sirena"
+                    value={nomeLido}
+                    onChange={(e) => setNomeLido(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Scegli Piano Commerciale</label>
+                <div className="relative">
+                  <Sparkles className="w-4 h-4 text-indigo-400 absolute left-4 top-3.5" />
+                  <select
+                    value={tipoContratto}
+                    onChange={(e) => setTipoContratto(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 appearance-none cursor-pointer"
+                  >
+                    <option value="commissione_5">Opzione A: Commissione 5% (Zero rischi)</option>
+                    <option value="ibrido_149">Opzione B: Canone 149€/mese + 2%</option>
+                    <option value="flat_stagionale">Opzione C: Flat Stagionale 900€</option>
+                  </select>
+                </div>
+              </div>
+            </>
+          )}
+
           <div className="space-y-1.5">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Indirizzo Email</label>
             <div className="relative">
