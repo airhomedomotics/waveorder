@@ -237,7 +237,7 @@ alter table lidi_gestori enable row level security;
 create policy "Gestori leggibili dallo staff"
 on lidi_gestori for select
 using (
-    lido_id in (select lido_id from lidi_gestori where user_id = auth.uid())
+    user_id = auth.uid()
 );
 
 -- 3. RLS OMBRELLONI
