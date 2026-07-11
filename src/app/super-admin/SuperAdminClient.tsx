@@ -77,6 +77,31 @@ export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissi
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Calcola il guadagno stimato della piattaforma per ciascun lido
+  const lidiEarnings = useMemo(() => {
+    const earnings: Record<string, number> = {};
+    
+    lidi.forEach(l => {
+      // 1. Commissioni contanti accumulate
+      const cashCommSum = cashCommissions
+        .filter(c => c.lido_id === l.id)
+        .reduce((sum, c) => sum + Number(c.importo_commissione), 0);
+
+      // 2. Commissioni Stripe Connect
+      const stripeOrders = paidOrders.filter(
+        o => o.lido_id === l.id && o.metodo_pagamento === 'carta_stripe' && o.stato === 'consegnato'
+      );
+      const stripeCommSum = stripeOrders.reduce((sum, o) => {
+        const percentage = Number(l.quota_commissione_percentuale) || 0;
+        return sum + (Number(o.totale) * (percentage / 100));
+      }, 0);
+
+      earnings[l.id] = cashCommSum + stripeCommSum;
+    });
+
+    return earnings;
+  }, [lidi, paidOrders, cashCommissions]);
+
   // Calcola metriche aggregate
   const stats = useMemo(() => {
     const totalTransacted = paidOrders.reduce((sum, o) => sum + Number(o.totale), 0);
@@ -320,6 +345,7 @@ export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissi
                 <th className="px-6 py-4.5">Stabilimento</th>
                 <th className="px-6 py-4.5">E-mail Gestore</th>
                 <th className="px-6 py-4.5">Contratto</th>
+                <th className="px-6 py-4.5">Guadagno AGY</th>
                 <th className="px-6 py-4.5">Stripe Connected</th>
                 <th className="px-6 py-4.5">Stato contanti</th>
                 <th className="px-6 py-4.5 text-right">Azioni</th>
@@ -338,6 +364,11 @@ export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissi
                   <td className="px-6 py-4">
                     <span className="capitalize font-bold text-xs text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full">
                       {lido.tipo_contratto.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="font-extrabold text-sm text-emerald-400">
+                      €{(lidiEarnings[lido.id] || 0).toFixed(2)}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -751,6 +782,28 @@ export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissi
                     ) : (
                       'Salva Impostazioni Commerciali'
                     )}
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Sei sicuro di voler eliminare DEFINITIVAMENTE il lido "${selectedLido.nome_struttura}"?\nQuesta operazione cancellerà tutti i dipendenti, ombrelloni, prodotti, ordini e commissioni ad esso associati e non sarà reversibile.`)) return;
+                      try {
+                        const res = await fetch(`/api/lidi?id=${selectedLido.id}`, { method: 'DELETE' });
+                        const data = await res.json();
+                        if (res.ok) {
+                          alert('Lido eliminato con successo!');
+                          setLidi(prev => prev.filter(l => l.id !== selectedLido.id));
+                          setSelectedLido(null);
+                        } else {
+                          alert(`Errore: ${data.error || 'Cancellazione non riuscita'}`);
+                        }
+                      } catch {
+                        alert('Errore di rete durante la cancellazione.');
+                      }
+                    }}
+                    className="w-full py-3 bg-red-950/20 hover:bg-red-900 border border-red-500/20 hover:border-red-500/30 text-red-400 font-bold rounded-xl text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 mt-2"
+                  >
+                    Elimina Struttura
                   </button>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { CreditCard, DollarSign, ArrowLeft, ShieldAlert, CheckCircle, Save, Globe, QrCode, Upload, Users, Search, Trophy, TrendingUp, BarChart3, Settings, ShoppingBag, Activity, Star } from 'lucide-react';
+import { CreditCard, DollarSign, ArrowLeft, ShieldAlert, CheckCircle, Save, Globe, QrCode, Upload, Users, Search, Trophy, TrendingUp, BarChart3, Settings, ShoppingBag, Activity, Star, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 
@@ -18,6 +18,11 @@ interface Lido {
   fidelity_attivo: boolean;
   fidelity_soglia_punti: number;
   fidelity_valore_sconto: number | string;
+  email_amministratore: string;
+  bar_ora_apertura?: string;
+  bar_ora_chiusura?: string;
+  cucina_ora_apertura?: string;
+  cucina_ora_chiusura?: string;
 }
 
 interface Order {
@@ -53,10 +58,90 @@ interface LidoAdminClientProps {
   orders: Order[];
   cashCommissions: CashCommission[];
   clientiFidelity: ClienteFidelity[];
+  userRole: string;
 }
 
-export default function LidoAdminClient({ lido, orders, cashCommissions, clientiFidelity }: LidoAdminClientProps) {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'settings' | 'fidelity'>('analytics');
+export default function LidoAdminClient({ lido, orders, cashCommissions, clientiFidelity, userRole }: LidoAdminClientProps) {
+  const [activeView, setActiveView] = useState<'hub' | 'analytics' | 'settings' | 'fidelity' | 'staff'>('hub');
+  
+  // Staff states
+  const [staffList, setStaffList] = useState<any[]>([]);
+  const [isLoadingStaff, setIsLoadingStaff] = useState(false);
+  const [newStaffNome, setNewStaffNome] = useState('');
+  const [newStaffEmail, setNewStaffEmail] = useState('');
+  const [newStaffPassword, setNewStaffPassword] = useState('');
+  const [newStaffRuolo, setNewStaffRuolo] = useState<'admin' | 'staff' | 'cucina' | 'bar'>('staff');
+  const [staffMessage, setStaffMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [isSubmittingStaff, setIsSubmittingStaff] = useState(false);
+
+  const fetchStaffList = async () => {
+    setIsLoadingStaff(true);
+    try {
+      const res = await fetch('/api/admin/staff');
+      const data = await res.json();
+      if (data.staff) {
+        setStaffList(data.staff);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoadingStaff(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (activeView === 'staff' && userRole === 'admin') {
+      fetchStaffList();
+    }
+  }, [activeView, userRole]);
+
+  const handleCreateStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStaffMessage(null);
+    setIsSubmittingStaff(true);
+    try {
+      const res = await fetch('/api/admin/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: newStaffNome,
+          email: newStaffEmail,
+          password: newStaffPassword,
+          ruolo: newStaffRuolo
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.staff) {
+        setStaffMessage({ type: 'success', text: 'Account staff creato con successo!' });
+        setNewStaffNome('');
+        setNewStaffEmail('');
+        setNewStaffPassword('');
+        setNewStaffRuolo('staff');
+        fetchStaffList();
+      } else {
+        setStaffMessage({ type: 'error', text: data.error || 'Errore durante la creazione dell\'account' });
+      }
+    } catch {
+      setStaffMessage({ type: 'error', text: 'Errore di rete' });
+    } finally {
+      setIsSubmittingStaff(false);
+    }
+  };
+
+  const handleDeleteStaff = async (staffId: string, staffName: string) => {
+    if (!confirm(`Sei sicuro di voler eliminare l'account di "${staffName}"?\nL'utente non potrà più accedere.`)) return;
+    try {
+      const res = await fetch(`/api/admin/staff?id=${staffId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        setStaffList(prev => prev.filter(s => s.id !== staffId));
+      } else {
+        alert(data.error || 'Errore durante la cancellazione');
+      }
+    } catch {
+      alert('Errore di rete');
+    }
+  };
   const [nomeStruttura, setNomeStruttura] = useState(lido.nome_struttura);
   const [logoUrl, setLogoUrl] = useState(lido.logo_url || '');
   const [colorePrimario, setColorePrimario] = useState(lido.colore_primario);
@@ -68,6 +153,10 @@ export default function LidoAdminClient({ lido, orders, cashCommissions, clienti
   const [fidelitySogliaPunti, setFidelitySogliaPunti] = useState(lido.fidelity_soglia_punti || 100);
   const [fidelityValoreSconto, setFidelityValoreSconto] = useState(Number(lido.fidelity_valore_sconto) || 5.00);
   const [clientiSearch, setClientiSearch] = useState('');
+  const [barOraApertura, setBarOraApertura] = useState(lido.bar_ora_apertura || '07:00');
+  const [barOraChiusura, setBarOraChiusura] = useState(lido.bar_ora_chiusura || '20:00');
+  const [cucinaOraApertura, setCucinaOraApertura] = useState(lido.cucina_ora_apertura || '12:30');
+  const [cucinaOraChiusura, setCucinaOraChiusura] = useState(lido.cucina_ora_chiusura || '17:00');
   const supabase = createClient();
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,6 +253,10 @@ export default function LidoAdminClient({ lido, orders, cashCommissions, clienti
           fidelity_attivo: fidelityAttivo,
           fidelity_soglia_punti: Number(fidelitySogliaPunti),
           fidelity_valore_sconto: Number(fidelityValoreSconto),
+          bar_ora_apertura: barOraApertura,
+          bar_ora_chiusura: barOraChiusura,
+          cucina_ora_apertura: cucinaOraApertura,
+          cucina_ora_chiusura: cucinaOraChiusura,
         }),
       });
 
@@ -181,74 +274,239 @@ export default function LidoAdminClient({ lido, orders, cashCommissions, clienti
   };
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-6 pb-12">
-      {/* HEADER */}
-      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-900 mb-6 max-w-7xl mx-auto">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/dashboard/orders"
-            className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-400 hover:text-white transition-colors"
+      {/* HEADER BREADCRUMB (Visible only inside sub-views) */}
+      {activeView !== 'hub' && (
+        <header className="flex items-center gap-4 pb-6 border-b border-slate-900 mb-8 max-w-7xl mx-auto">
+          <button
+            onClick={() => setActiveView('hub')}
+            className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-400 hover:text-white transition-all flex items-center justify-center cursor-pointer"
           >
             <ArrowLeft className="w-5 h-5" />
-          </Link>
+          </button>
           <div>
-            <h1 className="text-2xl font-black tracking-tight">{lido.nome_struttura} - Impostazioni Admin</h1>
+            <h1 className="text-2xl font-black tracking-tight">
+              {activeView === 'analytics' && '📊 Analisi Finanziaria & Reports'}
+              {activeView === 'settings' && '⚙️ Configurazione Brand & Stripe'}
+              {activeView === 'fidelity' && '💳 Fidelity WaveCard & Clienti'}
+              {activeView === 'staff' && '👥 Gestione Staff & Dipendenti'}
+            </h1>
             <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider font-bold">
-              Gestione Menu, Spiaggia e Configurazione Commerciale
+              {activeView === 'analytics' && 'Resoconto vendite, ticket medio e andamento stabilimento'}
+              {activeView === 'settings' && 'Personalizza il logo del lido, il colore primario e onboarding Stripe Connect'}
+              {activeView === 'fidelity' && 'Soglie punti WaveCard, valore sconti e elenco clienti fidelity'}
+              {activeView === 'staff' && 'Crea e cancella gli account per i baristi, cuochi e altri gestori'}
             </p>
           </div>
+        </header>
+      )}
+
+      {/* VIEW: CONTROL HUB (HUB PRINCIPALE CON CARD) */}
+      {activeView === 'hub' && (
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* WELCOME / IDENTITY BANNER */}
+          <div className="bg-slate-900/30 border border-slate-900 rounded-3xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex items-center gap-4">
+              {lido.logo_url ? (
+                <img src={lido.logo_url} alt={lido.nome_struttura} className="w-14 h-14 rounded-2xl object-cover border border-slate-800" />
+              ) : (
+                <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-black text-xl border border-slate-800">
+                  {lido.nome_struttura.charAt(0)}
+                </div>
+              )}
+              <div>
+                <h2 className="font-extrabold text-xl text-slate-100 flex items-center gap-2">
+                  <span>{lido.nome_struttura}</span>
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-wider">
+                    {userRole === 'admin' ? 'Gestore Admin' : `Staff - ${userRole}`}
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">Benvenuto nel pannello di controllo dello stabilimento balneare.</p>
+              </div>
+            </div>
+            {/* Quick action: Logout or link to frontend menu */}
+            <div className="flex gap-3">
+              <a
+                href={`/menu/${lido.slug}`}
+                target="_blank"
+                className="bg-indigo-650/10 hover:bg-indigo-650/20 border border-indigo-500/20 hover:border-indigo-500/30 text-indigo-400 text-xs font-bold px-4 py-2.5 rounded-xl transition-all"
+              >
+                Apri Menu Cliente
+              </a>
+              <button
+                onClick={async () => {
+                  const { createClient } = await import('@/utils/supabase/client');
+                  const supabase = createClient();
+                  await supabase.auth.signOut();
+                  window.location.href = '/login';
+                }}
+                className="bg-slate-900 border border-slate-850 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold px-4.5 py-2.5 rounded-xl transition-all cursor-pointer"
+              >
+                Scollegati
+              </button>
+            </div>
+          </div>
+
+          {/* CONTROL PANELS TILES GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            
+            {/* Card 1: KDS Cucina (Available to: admin, cucina, staff) */}
+            {['admin', 'cucina', 'staff'].includes(userRole) && (
+              <a
+                href="/dashboard/orders?reparto=cucina"
+                className="group relative bg-slate-900/40 hover:bg-slate-900/60 border border-slate-900 hover:border-amber-500/40 rounded-3xl p-6.5 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                    🍳
+                  </div>
+                  <span className="text-[10px] text-amber-400 border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">KDS Cucina</span>
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-100 group-hover:text-amber-400 transition-colors">Monitor Cucina</h3>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">Visualizza, prepara e gestisci le ordinazioni di cibo e piatti caldi.</p>
+                </div>
+              </a>
+            )}
+
+            {/* Card 2: KDS Bar (Available to: admin, bar, staff) */}
+            {['admin', 'bar', 'staff'].includes(userRole) && (
+              <a
+                href="/dashboard/orders?reparto=bar"
+                className="group relative bg-slate-900/40 hover:bg-slate-900/60 border border-slate-900 hover:border-sky-500/40 rounded-3xl p-6.5 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-400 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                    ☕
+                  </div>
+                  <span className="text-[10px] text-sky-400 border border-sky-500/20 bg-sky-500/5 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">KDS Bar</span>
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-100 group-hover:text-sky-400 transition-colors">Monitor Bar</h3>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">Visualizza, prepara e gestisci le ordinazioni di drink, caffè e snack.</p>
+                </div>
+              </a>
+            )}
+
+            {/* Card 3: Gestione Menu (Available to: admin, cucina) */}
+            {['admin', 'cucina'].includes(userRole) && (
+              <Link
+                href="/dashboard/admin/menu"
+                className="group relative bg-slate-900/40 hover:bg-slate-900/60 border border-slate-900 hover:border-emerald-500/40 rounded-3xl p-6.5 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                    📋
+                  </div>
+                  <span className="text-[10px] text-emerald-400 border border-emerald-500/20 bg-emerald-500/5 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Menu</span>
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-100 group-hover:text-emerald-400 transition-colors">Gestione Menu</h3>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">Aggiungi prodotti, gestisci prezzi, disponibilità piatti e reparti.</p>
+                </div>
+              </Link>
+            )}
+
+            {/* Card 4: Analisi & Statistiche (Available to: admin) */}
+            {userRole === 'admin' && (
+              <button
+                onClick={() => setActiveView('analytics')}
+                className="group text-left relative bg-slate-900/40 hover:bg-slate-900/60 border border-slate-900 hover:border-indigo-500/40 rounded-3xl p-6.5 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4 w-full cursor-pointer"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                    📊
+                  </div>
+                  <span className="text-[10px] text-indigo-400 border border-indigo-500/20 bg-indigo-500/5 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Analytics</span>
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-100 group-hover:text-indigo-400 transition-colors">Analisi & Statistiche</h3>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">Visualizza fatturato totale, canali di pagamento e prodotti più venduti.</p>
+                </div>
+              </button>
+            )}
+
+            {/* Card 5: Piantina & Ombrelloni (Available to: admin) */}
+            {userRole === 'admin' && (
+              <Link
+                href="/dashboard/admin/ombrelloni"
+                className="group relative bg-slate-900/40 hover:bg-slate-900/60 border border-slate-900 hover:border-violet-500/40 rounded-3xl p-6.5 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="w-12 h-12 rounded-2xl bg-violet-500/10 text-violet-400 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                    ☂️
+                  </div>
+                  <span className="text-[10px] text-violet-400 border border-violet-500/20 bg-violet-500/5 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Spiaggia</span>
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-100 group-hover:text-violet-400 transition-colors">Piantina & Ombrelloni</h3>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">Configura la spiaggia, aggiungi ombrelloni e scarica i QR code.</p>
+                </div>
+              </Link>
+            )}
+
+            {/* Card 6: Fidelity WaveCard (Available to: admin) */}
+            {userRole === 'admin' && (
+              <button
+                onClick={() => setActiveView('fidelity')}
+                className="group text-left relative bg-slate-900/40 hover:bg-slate-900/60 border border-slate-900 hover:border-pink-500/40 rounded-3xl p-6.5 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4 w-full cursor-pointer"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="w-12 h-12 rounded-2xl bg-pink-500/10 text-pink-400 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                    💳
+                  </div>
+                  <span className="text-[10px] text-pink-400 border border-pink-500/20 bg-pink-500/5 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Fidelity</span>
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-100 group-hover:text-pink-400 transition-colors">Fidelity WaveCard</h3>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">Gestisci raccolta punti, sconti fidelity e visualizza clienti registrati.</p>
+                </div>
+              </button>
+            )}
+
+            {/* Card 7: Gestione Staff & Dipendenti (Available to: admin) */}
+            {userRole === 'admin' && (
+              <button
+                onClick={() => setActiveView('staff')}
+                className="group text-left relative bg-slate-900/40 hover:bg-slate-900/60 border border-slate-900 hover:border-cyan-500/40 rounded-3xl p-6.5 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4 w-full cursor-pointer"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                    👥
+                  </div>
+                  <span className="text-[10px] text-cyan-400 border border-cyan-500/20 bg-cyan-500/5 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Staff</span>
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-100 group-hover:text-cyan-400 transition-colors">Gestione Staff</h3>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">Crea e cancella gli account per baristi, cuochi e altri gestori.</p>
+                </div>
+              </button>
+            )}
+
+            {/* Card 8: Impostazioni Brand & Stripe (Available to: admin) */}
+            {userRole === 'admin' && (
+              <button
+                onClick={() => setActiveView('settings')}
+                className="group text-left relative bg-slate-900/40 hover:bg-slate-900/60 border border-slate-900 hover:border-slate-400/40 rounded-3xl p-6.5 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4 w-full cursor-pointer"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-350 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                    ⚙️
+                  </div>
+                  <span className="text-[10px] text-slate-400 border border-slate-800 bg-slate-900/40 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Impostazioni</span>
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-100 group-hover:text-slate-200 transition-colors">Impostazioni Brand</h3>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">Modifica loghi, colori brand e collega il conto Stripe Connect.</p>
+                </div>
+              </button>
+            )}
+
+          </div>
         </div>
+      )}
 
-        {/* Link rapidi alle altre sezioni admin */}
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/dashboard/admin/menu"
-            className="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 hover:bg-slate-850 text-xs font-bold px-4 py-2.5 rounded-xl text-slate-200 hover:text-white transition-colors"
-          >
-            Gestione Menu
-          </Link>
-          <Link
-            href="/dashboard/admin/ombrelloni"
-            className="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 hover:bg-slate-850 text-xs font-bold px-4 py-2.5 rounded-xl text-slate-200 hover:text-white transition-colors"
-          >
-            Generatore Spiaggia & QR
-          </Link>
-        </div>
-      </header>
-
-      {/* TAB NAVIGATION */}
-      <div className="flex gap-2.5 pb-2 mb-8 border-b border-slate-900/60 max-w-7xl mx-auto overflow-x-auto scrollbar-none">
-        <button
-          onClick={() => setActiveTab('analytics')}
-          className={`px-4.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
-            activeTab === 'analytics' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/15' : 'text-slate-400 hover:text-slate-200 bg-slate-900/40 hover:bg-slate-900/60'
-          }`}
-        >
-          <BarChart3 className="w-4 h-4" />
-          Resoconto & Analisi
-        </button>
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`px-4.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
-            activeTab === 'settings' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/15' : 'text-slate-400 hover:text-slate-200 bg-slate-900/40 hover:bg-slate-900/60'
-          }`}
-        >
-          <Settings className="w-4 h-4" />
-          Impostazioni Lido
-        </button>
-        <button
-          onClick={() => setActiveTab('fidelity')}
-          className={`px-4.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
-            activeTab === 'fidelity' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/15' : 'text-slate-400 hover:text-slate-200 bg-slate-900/40 hover:bg-slate-900/60'
-          }`}
-        >
-          <Star className="w-4 h-4 text-indigo-400" />
-          Fidelity & Clienti
-        </button>
-      </div>
-
-      {/* TABS CONTENT */}
-      {activeTab === 'analytics' && (
-        /* Tab 1: Statistiche & Analisi */
+      {/* VIEW: STATISTICHE E RESOCONTO */}
+      {activeView === 'analytics' && userRole === 'admin' && (
         <div className="space-y-8 max-w-7xl mx-auto">
           {/* METRICHE FINANZIARIE DEL LIDO */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
@@ -395,7 +653,7 @@ export default function LidoAdminClient({ lido, orders, cashCommissions, clienti
         </div>
       )}
 
-      {activeTab === 'settings' && (
+      {activeView === 'settings' && userRole === 'admin' && (
         /* Tab 2: Configurazione Stabilimento e Stripe */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {/* Form Impostazioni */}
@@ -467,6 +725,72 @@ export default function LidoAdminClient({ lido, orders, cashCommissions, clienti
                     className="w-12 h-12 bg-transparent border-0 rounded-xl cursor-pointer"
                   />
                   <span className="text-sm font-mono uppercase tracking-wider">{colorePrimario}</span>
+                </div>
+              </div>
+
+              {/* ORARI REPARTI */}
+              <div className="border-t border-slate-900 pt-5 space-y-4">
+                <h3 className="font-extrabold text-sm text-slate-200 uppercase tracking-wider">Orari di Apertura Reparti</h3>
+                <p className="text-xs text-slate-500">Definisci le fasce orarie in cui i clienti possono ordinare dal Bar e dalla Cucina.</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Orari Bar */}
+                  <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4.5 space-y-3.5">
+                    <h4 className="font-bold text-xs text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <span>☕ Reparto Bar</span>
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] text-slate-500 font-bold uppercase mb-1">Apertura</label>
+                        <input
+                          type="time"
+                          required
+                          value={barOraApertura}
+                          onChange={(e) => setBarOraApertura(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-slate-500 font-bold uppercase mb-1">Chiusura</label>
+                        <input
+                          type="time"
+                          required
+                          value={barOraChiusura}
+                          onChange={(e) => setBarOraChiusura(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Orari Cucina */}
+                  <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4.5 space-y-3.5">
+                    <h4 className="font-bold text-xs text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <span>🍳 Reparto Cucina</span>
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] text-slate-500 font-bold uppercase mb-1">Apertura</label>
+                        <input
+                          type="time"
+                          required
+                          value={cucinaOraApertura}
+                          onChange={(e) => setCucinaOraApertura(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-slate-500 font-bold uppercase mb-1">Chiusura</label>
+                        <input
+                          type="time"
+                          required
+                          value={cucinaOraChiusura}
+                          onChange={(e) => setCucinaOraChiusura(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -561,7 +885,7 @@ export default function LidoAdminClient({ lido, orders, cashCommissions, clienti
       )}
 
       {/* Tab 3: Fidelity & Clienti */}
-      {activeTab === 'fidelity' && (
+      {activeView === 'fidelity' && userRole === 'admin' && (
         <div className="max-w-7xl mx-auto space-y-8">
           {/* CONFIGURAZIONE RACCOLTA PUNTI (FIDELITY CARD) */}
           <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-6.5">
@@ -705,6 +1029,144 @@ export default function LidoAdminClient({ lido, orders, cashCommissions, clienti
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* VIEW: GESTIONE STAFF */}
+      {activeView === 'staff' && userRole === 'admin' && (
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* AGGIUNGI MEMBRO STAFF */}
+            <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-6.5 h-fit space-y-6">
+              <div>
+                <h2 className="font-extrabold text-lg text-slate-100 pb-3 border-b border-slate-900">Crea Account Staff</h2>
+                <p className="text-xs text-slate-400 mt-1">Crea un account per consentire al tuo staff di accedere al KDS o al menu.</p>
+              </div>
+
+              {staffMessage && (
+                <div className={`p-3.5 rounded-xl text-xs font-semibold border ${
+                  staffMessage.type === 'error'
+                    ? 'bg-red-500/15 border-red-500/20 text-red-400'
+                    : 'bg-emerald-500/15 border-emerald-500/20 text-emerald-400'
+                }`}>
+                  {staffMessage.text}
+                </div>
+              )}
+
+              <form onSubmit={handleCreateStaff} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Nome Dipendente</label>
+                  <input
+                    type="text"
+                    required
+                    value={newStaffNome}
+                    onChange={(e) => setNewStaffNome(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    placeholder="Es. Mario Rossi"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Email di Login</label>
+                  <input
+                    type="email"
+                    required
+                    value={newStaffEmail}
+                    onChange={(e) => setNewStaffEmail(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    placeholder="Es. mario.cucina@lido.it"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Password</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={newStaffPassword}
+                    onChange={(e) => setNewStaffPassword(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    placeholder="Almeno 6 caratteri"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Ruolo & Permessi</label>
+                  <select
+                    value={newStaffRuolo}
+                    onChange={(e) => setNewStaffRuolo(e.target.value as any)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  >
+                    <option value="staff">Staff Generale (KDS Bar & Cucina)</option>
+                    <option value="cucina">Cucina (Solo KDS Cucina + Modifica Menu)</option>
+                    <option value="bar">Bar (Solo KDS Bar)</option>
+                    <option value="admin">Admin (Tutti i poteri + Staff)</option>
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingStaff}
+                  className="w-full py-4 bg-indigo-650 hover:bg-indigo-600 text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-lg transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isSubmittingStaff ? (
+                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  ) : (
+                    'Crea Account Dipendente'
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* LISTA STAFF ESISTENTE */}
+            <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-6.5 lg:col-span-2 space-y-6">
+              <h2 className="font-extrabold text-lg text-slate-100 pb-3 border-b border-slate-900">Membri dello Staff</h2>
+              
+              {isLoadingStaff ? (
+                <div className="py-12 text-center text-slate-500">
+                  <span className="w-8 h-8 border-2 border-slate-700 border-t-indigo-500 rounded-full animate-spin inline-block"></span>
+                  <p className="text-xs mt-2">Caricamento staff in corso...</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                  {staffList.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between bg-slate-950/50 border border-slate-900 rounded-2xl px-5 py-4">
+                      <div>
+                        <h4 className="font-bold text-sm text-slate-200">{member.nome || 'Dipendente'}</h4>
+                        <p className="text-xs text-slate-500 mt-0.5">{member.email || 'Email non disponibile'}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-[9px] uppercase font-extrabold px-2.5 py-1 rounded-full border ${
+                          member.ruolo === 'admin' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' :
+                          member.ruolo === 'cucina' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                          member.ruolo === 'bar' ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' :
+                          'bg-slate-800 text-slate-400 border-slate-750'
+                        }`}>
+                          {member.ruolo}
+                        </span>
+                        
+                        {member.email !== lido.email_amministratore && (
+                          <button
+                            onClick={() => handleDeleteStaff(member.id, member.nome)}
+                            className="p-2 bg-slate-900 hover:bg-red-950/30 hover:border-red-900/50 hover:text-red-400 border border-slate-800 text-slate-500 rounded-xl transition-all cursor-pointer"
+                            title="Rimuovi staff"
+                          >
+                            <Trash2 className="w-4.5 h-4.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {staffList.length === 0 && (
+                    <div className="py-12 text-center text-slate-650">
+                      Nessun dipendente censito oltre al proprietario.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -14,6 +14,10 @@ interface Lido {
   fidelity_attivo: boolean;
   fidelity_soglia_punti: number;
   fidelity_valore_sconto: number | string;
+  bar_ora_apertura?: string;
+  bar_ora_chiusura?: string;
+  cucina_ora_apertura?: string;
+  cucina_ora_chiusura?: string;
 }
 
 interface Ombrellone {
@@ -34,6 +38,7 @@ interface Prodotto {
   descrizione: string | null;
   prezzo: number | string;
   immagine_url: string | null;
+  reparto?: string;
 }
 
 interface CartItem {
@@ -50,6 +55,33 @@ interface MenuClientProps {
 }
 
 export default function MenuClient({ lido, initialOmbrellone, categories, products }: MenuClientProps) {
+  // Verifica se un reparto è aperto in base all'ora locale
+  const isDepartmentOpen = (reparto?: string) => {
+    const now = new Date();
+    const currentStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const targetRep = (reparto || 'bar') === 'cucina' ? 'cucina' : 'bar';
+    const openTime = targetRep === 'cucina' 
+      ? (lido.cucina_ora_apertura || '12:30') 
+      : (lido.bar_ora_apertura || '07:00');
+    const closeTime = targetRep === 'cucina' 
+      ? (lido.cucina_ora_chiusura || '17:00') 
+      : (lido.bar_ora_chiusura || '20:00');
+
+    return currentStr >= openTime && currentStr <= closeTime;
+  };
+
+  const getDepartmentHoursRange = (reparto?: string) => {
+    const targetRep = (reparto || 'bar') === 'cucina' ? 'cucina' : 'bar';
+    const openTime = targetRep === 'cucina' 
+      ? (lido.cucina_ora_apertura || '12:30') 
+      : (lido.bar_ora_apertura || '07:00');
+    const closeTime = targetRep === 'cucina' 
+      ? (lido.cucina_ora_chiusura || '17:00') 
+      : (lido.bar_ora_chiusura || '20:00');
+    return `${openTime} - ${closeTime}`;
+  };
+
   const [selectedCategory, setSelectedCategory] = useState<string>(categories[0]?.id || '');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -213,6 +245,11 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
   }, [cartTotal, discountAmount]);
 
   const addToCart = (product: Prodotto) => {
+    const rep = product.reparto || 'bar';
+    if (!isDepartmentOpen(rep)) {
+      alert(`Il reparto ${rep === 'cucina' ? 'Cucina' : 'Bar'} è chiuso in questo orario. Servizio attivo dalle ${getDepartmentHoursRange(rep)}.`);
+      return;
+    }
     setCart((prev) => {
       const existing = prev.find((item) => item.prodotto.id === product.id);
       if (existing) {
@@ -251,6 +288,19 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
 
     setIsSubmitting(true);
     setErrorMsg(null);
+
+    // Controlla che i reparti di tutti gli articoli nel carrello siano aperti
+    const closedRepartments = cart.filter(item => {
+      const rep = item.prodotto.reparto || 'bar';
+      return !isDepartmentOpen(rep);
+    });
+
+    if (closedRepartments.length > 0) {
+      const names = closedRepartments.map(i => i.prodotto.nome).join(', ');
+      setErrorMsg(`Impossibile inviare l'ordine: i reparti per alcuni prodotti nel carrello sono ora chiusi (${names}).`);
+      setIsSubmitting(false);
+      return;
+    }
 
     const threshold = lido.fidelity_soglia_punti || 100;
     const payload = {
@@ -530,6 +580,10 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
         ) : (
           filteredProducts.map((product) => {
             const qty = getProductCartQty(product.id);
+            const rep = product.reparto || 'bar';
+            const open = isDepartmentOpen(rep);
+            const range = getDepartmentHoursRange(rep);
+
             return (
               <div key={product.id} className="bg-slate-800/25 backdrop-blur-md border border-slate-800/60 rounded-3xl p-4 flex gap-4 transition-all duration-300 hover:border-slate-700/40">
                 {product.immagine_url ? (
@@ -545,6 +599,17 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
                     {product.descrizione && (
                       <p className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">{product.descrizione}</p>
                     )}
+                    
+                    {/* Badge Reparto ed Orario */}
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+                        open 
+                          ? 'bg-slate-900/40 text-slate-400 border-slate-800' 
+                          : 'bg-red-500/10 text-red-400 border-red-500/20 animate-pulse'
+                      }`}>
+                        {rep === 'cucina' ? '🍳 Cucina' : '☕ Bar'} ({range})
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between mt-3">
                     <span className="font-black text-sm text-indigo-400">
@@ -552,13 +617,19 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
                     </span>
                     
                     {qty === 0 ? (
-                      <button
-                        onClick={() => addToCart(product)}
-                        className="flex items-center gap-1 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 text-[10px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl text-slate-200 hover:text-white transition-all active:scale-95"
-                      >
-                        <Plus className="w-3 h-3 text-indigo-400" />
-                        <span>Aggiungi</span>
-                      </button>
+                      open ? (
+                        <button
+                          onClick={() => addToCart(product)}
+                          className="flex items-center gap-1 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 text-[10px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl text-slate-200 hover:text-white transition-all active:scale-95 cursor-pointer"
+                        >
+                          <Plus className="w-3 h-3 text-indigo-400" />
+                          <span>Aggiungi</span>
+                        </button>
+                      ) : (
+                        <span className="text-[9px] font-black uppercase tracking-wider text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-xl">
+                          Chiuso
+                        </span>
+                      )
                     ) : (
                       <div className="flex items-center gap-2.5 bg-slate-800/90 border border-slate-750 rounded-xl px-2 py-1">
                         <button
@@ -569,7 +640,13 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
                         </button>
                         <span className="font-black text-xs min-w-4 text-center">{qty}</span>
                         <button
-                          onClick={() => updateQuantity(product.id, 1)}
+                          onClick={() => {
+                            if (!open) {
+                              alert(`Il reparto ${rep === 'cucina' ? 'Cucina' : 'Bar'} è ora chiuso (${range}). Non puoi aggiungere altre quantità.`);
+                              return;
+                            }
+                            updateQuantity(product.id, 1);
+                          }}
                           className="p-1 hover:bg-slate-750 rounded text-slate-400 hover:text-white transition-colors"
                         >
                           <Plus className="w-3.5 h-3.5" />

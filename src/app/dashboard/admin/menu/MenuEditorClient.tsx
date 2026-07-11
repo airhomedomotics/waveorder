@@ -20,6 +20,7 @@ interface Prodotto {
   prezzo: number | string;
   immagine_url: string | null;
   disponibile: boolean;
+  reparto?: string;
 }
 
 interface MenuEditorClientProps {
@@ -82,6 +83,7 @@ export default function MenuEditorClient({ lidoId, initialCategories, initialPro
   const [prodPrice, setProdPrice] = useState<number | string>('');
   const [prodImg, setProdImg] = useState('');
   const [prodAvailable, setProdAvailable] = useState(true);
+  const [prodReparto, setProdReparto] = useState<'bar' | 'cucina'>('bar');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -157,6 +159,7 @@ export default function MenuEditorClient({ lidoId, initialCategories, initialPro
     setProdPrice(prod ? prod.prezzo : '');
     setProdImg(prod ? prod.immagine_url || '' : '');
     setProdAvailable(prod ? prod.disponibile : true);
+    setProdReparto(prod ? (prod.reparto as any) || 'bar' : 'bar');
     setErrorMsg(null);
     setIsProdModalOpen(true);
   };
@@ -179,6 +182,7 @@ export default function MenuEditorClient({ lidoId, initialCategories, initialPro
       prezzo: Number(prodPrice),
       immagine_url: prodImg || null,
       disponibile: prodAvailable,
+      reparto: prodReparto,
     };
 
     try {
@@ -529,13 +533,25 @@ export default function MenuEditorClient({ lidoId, initialCategories, initialPro
                   </div>
                 </div>
               </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Reparto Destinazione (KDS)</label>
+                <select
+                  value={prodReparto}
+                  onChange={(e) => setProdReparto(e.target.value as any)}
+                  className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-bold"
+                >
+                  <option value="bar">☕ Bar (Snack, Gelati, Drink, Caffetteria)</option>
+                  <option value="cucina">🍳 Cucina (Primi, Secondi, Pizze, Ristorante)</option>
+                </select>
+              </div>
+
               <div className="flex items-center justify-between p-3 bg-slate-950 rounded-xl">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Disponibile</span>
                 <input
                   type="checkbox"
                   checked={prodAvailable}
                   onChange={(e) => setProdAvailable(e.target.checked)}
-                  className="w-5 h-5 rounded border-slate-800 text-indigo-650 bg-slate-950 focus:ring-indigo-500/50"
+                  className="w-5 h-5 rounded border-slate-800 text-indigo-650 bg-slate-950 focus:ring-indigo-500/50 cursor-pointer"
                 />
               </div>
               <button

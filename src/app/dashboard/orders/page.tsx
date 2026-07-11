@@ -2,7 +2,10 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import DashboardClient from './DashboardClient';
 
-export default async function DashboardOrdersPage() {
+export default async function DashboardOrdersPage(props: { searchParams: Promise<{ reparto?: string }> }) {
+  const searchParams = await props.searchParams;
+  const targetReparto = searchParams.reparto || 'all';
+
   const supabase = await createClient();
 
   // Verifica che l'utente sia loggato
@@ -40,7 +43,7 @@ export default async function DashboardOrdersPage() {
       ombrelloni (codice_identificativo),
       dettagli_ordine (
         id, quantita, prezzo_unitario, note,
-        prodotti (nome)
+        prodotti (nome, reparto)
       )
     `)
     .eq('lido_id', gestore.lido_id)
@@ -51,6 +54,7 @@ export default async function DashboardOrdersPage() {
       lido={lido!}
       initialOrders={initialOrders || []}
       userRole={gestore.ruolo || 'staff'}
+      repartoFilter={targetReparto}
     />
   );
 }

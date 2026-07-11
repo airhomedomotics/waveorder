@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const productIds = items.map((item: any) => item.prodotto_id);
     const { data: dbProducts, error: productsError } = await supabase
       .from('prodotti')
-      .select('id, nome, prezzo')
+      .select('id, nome, prezzo, reparto')
       .in('id', productIds)
       .eq('lido_id', lido_id)
       .eq('disponibile', true);
@@ -49,10 +49,23 @@ export async function POST(request: Request) {
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
     const dettagliOrdineDaInserire: any[] = [];
 
+    // Calcola ora locale di Roma per validazione orari
+    const nowStr = new Date().toLocaleTimeString('it-IT', { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit' });
+
     for (const item of items) {
       const dbProduct = dbProducts.find((p) => p.id === item.prodotto_id);
       if (!dbProduct) {
         return NextResponse.json({ error: 'Prodotto non trovato' }, { status: 400 });
+      }
+
+      // Validazione orario reparto
+      const rep = dbProduct.reparto || 'bar';
+      const openTime = rep === 'cucina' ? (lido.cucina_ora_apertura || '12:30') : (lido.bar_ora_apertura || '07:00');
+      const closeTime = rep === 'cucina' ? (lido.cucina_ora_chiusura || '17:00') : (lido.bar_ora_chiusura || '20:00');
+      if (nowStr < openTime || nowStr > closeTime) {
+        return NextResponse.json({ 
+          error: `Il reparto ${rep === 'cucina' ? 'Cucina' : 'Bar'} è chiuso in questo orario. Servizio attivo dalle ${openTime} alle ${closeTime}.` 
+        }, { status: 400 });
       }
 
       const itemTotal = Number(dbProduct.prezzo) * item.quantita;

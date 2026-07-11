@@ -18,11 +18,13 @@ CREATE TABLE IF NOT EXISTS candidature (
 -- RLS: inserimento pubblico, lettura solo super admin
 ALTER TABLE candidature ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Chiunque può inserire una candidatura" ON candidature;
 CREATE POLICY "Chiunque può inserire una candidatura"
   ON candidature
   FOR INSERT
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Solo super admin leggono candidature" ON candidature;
 CREATE POLICY "Solo super admin leggono candidature"
   ON candidature
   FOR SELECT
@@ -32,6 +34,7 @@ CREATE POLICY "Solo super admin leggono candidature"
     )
   );
 
+DROP POLICY IF EXISTS "Solo super admin aggiornano candidature" ON candidature;
 CREATE POLICY "Solo super admin aggiornano candidature"
   ON candidature
   FOR UPDATE

@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     if (slug) {
       const { data: lido, error } = await supabase
         .from('lidi')
-        .select('id, nome_struttura, slug, logo_url, colore_primario, accetta_contanti, pagamenti_digitali_attivi, stripe_account_id')
+        .select('id, nome_struttura, slug, logo_url, colore_primario, accetta_contanti, pagamenti_digitali_attivi, stripe_account_id, bar_ora_apertura, bar_ora_chiusura, cucina_ora_apertura, cucina_ora_chiusura')
         .eq('slug', slug)
         .eq('attivo', true)
         .single();
@@ -173,6 +173,10 @@ export async function PUT(request: Request) {
       fidelity_attivo,
       fidelity_soglia_punti,
       fidelity_valore_sconto,
+      bar_ora_apertura,
+      bar_ora_chiusura,
+      cucina_ora_apertura,
+      cucina_ora_chiusura,
       // Campi riservati al super_admin
       tipo_contratto,
       quota_commissione_percentuale,
@@ -199,6 +203,10 @@ export async function PUT(request: Request) {
     if (fidelity_attivo !== undefined) updateData.fidelity_attivo = fidelity_attivo;
     if (fidelity_soglia_punti !== undefined) updateData.fidelity_soglia_punti = fidelity_soglia_punti;
     if (fidelity_valore_sconto !== undefined) updateData.fidelity_valore_sconto = fidelity_valore_sconto;
+    if (bar_ora_apertura !== undefined) updateData.bar_ora_apertura = bar_ora_apertura;
+    if (bar_ora_chiusura !== undefined) updateData.bar_ora_chiusura = bar_ora_chiusura;
+    if (cucina_ora_apertura !== undefined) updateData.cucina_ora_apertura = cucina_ora_apertura;
+    if (cucina_ora_chiusura !== undefined) updateData.cucina_ora_chiusura = cucina_ora_chiusura;
 
     // Campi modificabili solo se super admin
     if (superAdmin) {
@@ -225,3 +233,48 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+// DELETE: Elimina definitivamente un lido (Solo Super Admin)
+export async function DELETE(request: Request) {
+  try {
+    const supabase = await createClient();
+
+    // Verifica autenticazione
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
+    }
+
+    // Controlla se è un super admin
+    const { data: superAdmin } = await supabase
+      .from('super_admins')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!superAdmin) {
+      return NextResponse.json({ error: 'Operazione consentita solo ai Super Admin' }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const lidoId = searchParams.get('id');
+
+    if (!lidoId) {
+      return NextResponse.json({ error: 'ID lido obbligatorio' }, { status: 400 });
+    }
+
+    const { error: dbError } = await supabase
+      .from('lidi')
+      .delete()
+      .eq('id', lidoId);
+
+    if (dbError) {
+      return NextResponse.json({ error: dbError.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ message: 'Lido eliminato con successo!' });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+

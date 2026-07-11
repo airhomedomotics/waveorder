@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { categoria_id, nome, descrizione, prezzo, immagine_url, disponibile } = body;
+    const { categoria_id, nome, descrizione, prezzo, immagine_url, disponibile, reparto } = body;
 
     if (!categoria_id || !nome || prezzo === undefined) {
       return NextResponse.json({ error: 'Campi obbligatori mancanti: categoria_id, nome, prezzo' }, { status: 400 });
@@ -97,7 +97,8 @@ export async function POST(request: Request) {
         descrizione,
         prezzo,
         immagine_url,
-        disponibile: disponibile !== undefined ? disponibile : true
+        disponibile: disponibile !== undefined ? disponibile : true,
+        reparto: reparto || 'bar'
       })
       .select()
       .single();
@@ -130,7 +131,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { id, categoria_id, nome, descrizione, prezzo, immagine_url, disponibile } = body;
+    const { id, categoria_id, nome, descrizione, prezzo, immagine_url, disponibile, reparto } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'ID prodotto obbligatorio' }, { status: 400 });
@@ -143,6 +144,7 @@ export async function PUT(request: Request) {
     if (prezzo !== undefined) updateData.prezzo = prezzo;
     if (immagine_url !== undefined) updateData.immagine_url = immagine_url;
     if (disponibile !== undefined) updateData.disponibile = disponibile;
+    if (reparto !== undefined) updateData.reparto = reparto;
 
     const { data: product, error: dbError } = await supabase
       .from('prodotti')

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Play, Check, X, AlertTriangle, ShieldAlert, ShoppingCart, DollarSign, CreditCard, Printer, Settings } from 'lucide-react';
+import { Play, Check, X, AlertTriangle, ShieldAlert, ShoppingCart, DollarSign, CreditCard, Printer, Settings, ArrowLeft } from 'lucide-react';
 
 interface Lido {
   id: string;
@@ -18,6 +18,7 @@ interface OrderDetail {
   note: string;
   prodotti: {
     nome: string;
+    reparto?: string;
   } | null;
 }
 
@@ -39,9 +40,10 @@ interface DashboardClientProps {
   lido: Lido;
   initialOrders: Order[];
   userRole: string;
+  repartoFilter?: string;
 }
 
-export default function DashboardClient({ lido, initialOrders, userRole }: DashboardClientProps) {
+export default function DashboardClient({ lido, initialOrders, userRole, repartoFilter = 'all' }: DashboardClientProps) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [activeWarnOrder, setActiveWarnOrder] = useState<Order | null>(null);
   const [isLidoCashActive, setIsLidoCashActive] = useState(lido.accetta_contanti);
@@ -87,7 +89,7 @@ export default function DashboardClient({ lido, initialOrders, userRole }: Dashb
         ombrelloni (codice_identificativo),
         dettagli_ordine (
           id, quantita, prezzo_unitario, note,
-          prodotti (nome)
+          prodotti (nome, reparto)
         )
       `)
       .eq('id', id)
@@ -179,11 +181,28 @@ export default function DashboardClient({ lido, initialOrders, userRole }: Dashb
     }, 150);
   };
 
+  // Filtra gli ordini in base al reparto configurato
+  const filteredOrders = React.useMemo(() => {
+    if (repartoFilter === 'all') return orders;
+
+    return orders.map((order) => {
+      const details = order.dettagli_ordine || [];
+      const filteredDetails = details.filter(
+        (det) => det.prodotti && det.prodotti.reparto === repartoFilter
+      );
+      if (filteredDetails.length === 0) return null;
+      return {
+        ...order,
+        dettagli_ordine: filteredDetails
+      };
+    }).filter(Boolean) as Order[];
+  }, [orders, repartoFilter]);
+
   // Separa gli ordini in colonne
   const columns = {
-    inviati: orders.filter((o) => o.stato === 'inviato'),
-    in_preparazione: orders.filter((o) => o.stato === 'in_preparazione'),
-    completati: orders.filter((o) => o.stato === 'consegnato' || o.stato === 'annullato').slice(0, 15),
+    inviati: filteredOrders.filter((o) => o.stato === 'inviato'),
+    in_preparazione: filteredOrders.filter((o) => o.stato === 'in_preparazione'),
+    completati: filteredOrders.filter((o) => o.stato === 'consegnato' || o.stato === 'annullato').slice(0, 15),
   };
 
   return (
@@ -191,7 +210,18 @@ export default function DashboardClient({ lido, initialOrders, userRole }: Dashb
       {/* HEADER DELLA DASHBOARD */}
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-900 mb-8 print:hidden">
         <div>
-          <h1 className="text-2xl font-black tracking-tight">{lido.nome_struttura}</h1>
+          <h1 className="text-2xl font-black tracking-tight flex items-center gap-2.5">
+            <span>{lido.nome_struttura}</span>
+            <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-lg border ${
+              repartoFilter === 'cucina' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+              repartoFilter === 'bar' ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' :
+              'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+            }`}>
+              {repartoFilter === 'cucina' ? '🍳 Monitor Cucina' :
+               repartoFilter === 'bar' ? '☕ Monitor Bar' :
+               '💻 Monitor Generale'}
+            </span>
+          </h1>
           <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider font-bold">
             Pannello Gestione Ordini & Comande • Contratto: {lido.tipo_contratto.replace('_', ' ')}
           </p>
@@ -199,13 +229,14 @@ export default function DashboardClient({ lido, initialOrders, userRole }: Dashb
 
         {/* STATUS BANNER ANTI-FRODE CONTANTI E IMPOSTAZIONI GESTORE */}
         <div className="flex items-center gap-3">
-          {userRole === 'admin' && (
+          {/* Pulsante Torna al Control Panel (Hub) per chi ha accesso a più parti */}
+          {['admin', 'cucina', 'staff'].includes(userRole) && (
             <a
               href="/dashboard/admin"
               className="bg-slate-900 border border-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold px-4.5 py-2.5 rounded-xl flex items-center gap-2 transition-colors"
             >
-              <Settings className="w-4 h-4 text-indigo-400" />
-              Gestione Lido
+              <ArrowLeft className="w-4 h-4 text-indigo-400" />
+              Pannello di Controllo
             </a>
           )}
 

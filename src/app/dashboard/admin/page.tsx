@@ -20,9 +20,8 @@ export default async function LidoAdminDashboardPage() {
 
   const gestore = gestoreList?.[0];
 
-  if (gestoreError || !gestore || gestore.ruolo !== 'admin') {
-    // Solo gli amministratori del lido possono accedere al pannello di gestione impostazioni
-    redirect('/dashboard/orders');
+  if (gestoreError || !gestore) {
+    redirect('/login');
   }
 
   // 3. Recupera dettagli lido
@@ -64,6 +63,7 @@ export default async function LidoAdminDashboardPage() {
       orders={(orders as any) || []}
       cashCommissions={cashCommissions || []}
       clientiFidelity={clientiFidelity || []}
+      userRole={gestore.ruolo || 'staff'}
     />
   );
 }
