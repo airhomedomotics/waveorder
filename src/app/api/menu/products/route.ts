@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { getGestore } from '@/utils/supabase/auth';
 
 // GET: Recupera tutti i prodotti di un lido (se pubblico, serve lido_id)
 export async function GET(request: Request) {
@@ -33,13 +34,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
     }
 
-    const { data: gestoreData, error: gestoreError } = await supabase
-      .from('lidi_gestori')
-      .select('lido_id')
-      .eq('user_id', user.id)
-      .single();
+    const gestoreData = await getGestore(supabase, user);
 
-    if (gestoreError || !gestoreData) {
+    if (!gestoreData) {
       return NextResponse.json({ error: 'Lido non trovato' }, { status: 404 });
     }
 
@@ -71,13 +68,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
     }
 
-    const { data: gestoreData, error: gestoreError } = await supabase
-      .from('lidi_gestori')
-      .select('lido_id')
-      .eq('user_id', user.id)
-      .single();
+    const gestoreData = await getGestore(supabase, user);
 
-    if (gestoreError || !gestoreData) {
+    if (!gestoreData) {
       return NextResponse.json({ error: 'Lido non trovato' }, { status: 404 });
     }
 
@@ -120,13 +113,9 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
     }
 
-    const { data: gestoreData, error: gestoreError } = await supabase
-      .from('lidi_gestori')
-      .select('lido_id')
-      .eq('user_id', user.id)
-      .single();
+    const gestoreData = await getGestore(supabase, user);
 
-    if (gestoreError || !gestoreData) {
+    if (!gestoreData) {
       return NextResponse.json({ error: 'Lido non trovato' }, { status: 404 });
     }
 
@@ -171,13 +160,9 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
     }
 
-    const { data: gestoreData, error: gestoreError } = await supabase
-      .from('lidi_gestori')
-      .select('lido_id')
-      .eq('user_id', user.id)
-      .single();
+    const gestoreData = await getGestore(supabase, user);
 
-    if (gestoreError || !gestoreData) {
+    if (!gestoreData) {
       return NextResponse.json({ error: 'Lido non trovato' }, { status: 404 });
     }
 

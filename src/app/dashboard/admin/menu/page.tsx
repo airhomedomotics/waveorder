@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { getGestore } from '@/utils/supabase/auth';
 import { redirect } from 'next/navigation';
 import MenuEditorClient from './MenuEditorClient';
 
@@ -11,16 +12,10 @@ export default async function MenuEditorPage() {
     redirect('/login');
   }
 
-  // 2. Mappa gestore
-  const { data: gestoreList, error: gestoreError } = await supabase
-    .from('lidi_gestori')
-    .select('lido_id, ruolo')
-    .eq('user_id', user.id)
-    .limit(1);
+  // 2. Mappa gestore (con supporto impersonificazione per Super Admin)
+  const gestore = await getGestore(supabase, user);
 
-  const gestore = gestoreList?.[0];
-
-  if (gestoreError || !gestore || gestore.ruolo !== 'admin') {
+  if (!gestore || gestore.ruolo !== 'admin') {
     redirect('/dashboard/orders');
   }
 

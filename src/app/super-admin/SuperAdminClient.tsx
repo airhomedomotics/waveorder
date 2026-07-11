@@ -52,9 +52,16 @@ interface SuperAdminClientProps {
   paidOrders: Order[];
   cashCommissions: CashCommission[];
   candidature: Candidatura[];
+  impersonateLidoId: string | null;
 }
 
-export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissions, candidature: initialCandidature }: SuperAdminClientProps) {
+export default function SuperAdminClient({ 
+  initialLidi, 
+  paidOrders, 
+  cashCommissions, 
+  candidature: initialCandidature,
+  impersonateLidoId
+}: SuperAdminClientProps) {
   const [lidi, setLidi] = useState<Lido[]>(initialLidi);
   const [candidature, setCandidature] = useState<Candidatura[]>(initialCandidature);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -174,6 +181,28 @@ export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissi
     }
   };
 
+  const handleImpersonate = async (lidoId: string | null) => {
+    try {
+      const res = await fetch('/api/super-admin/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lido_id: lidoId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (lidoId) {
+          window.location.href = '/dashboard/admin';
+        } else {
+          window.location.reload();
+        }
+      } else {
+        alert(data.error || 'Errore durante l\'impersonificazione');
+      }
+    } catch (err) {
+      alert('Errore di rete');
+    }
+  };
+
   const handleOpenLidoDetails = (lido: Lido) => {
     setSelectedLido(lido);
     setEditTipoContratto(lido.tipo_contratto as any);
@@ -257,6 +286,31 @@ export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissi
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-6 pb-12">
+      {impersonateLidoId && (
+        <div className="bg-indigo-900/50 border border-indigo-500/30 text-indigo-200 px-6 py-4 rounded-2xl mb-6 max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl shadow-indigo-950/20 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 bg-emerald-450 rounded-full animate-pulse"></span>
+            <p className="text-xs font-bold uppercase tracking-wider">
+              Impersonificazione attiva: <strong className="text-white font-black">{lidi.find(l => l.id === impersonateLidoId)?.nome_struttura || 'Stabilimento'}</strong>
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Link 
+              href="/dashboard/admin"
+              className="bg-indigo-650 hover:bg-indigo-650/80 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/10"
+            >
+              Gestisci Lido
+            </Link>
+            <button 
+              onClick={() => handleImpersonate(null)}
+              className="bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-300 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+            >
+              Esci
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-900 mb-8 max-w-7xl mx-auto">
         <div>
@@ -392,6 +446,14 @@ export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissi
                     )}
                   </td>
                   <td className="px-6 py-4 text-right space-x-2">
+                    <button
+                      onClick={() => handleImpersonate(lido.id)}
+                      className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl text-slate-200 border border-slate-750 transition-colors cursor-pointer"
+                      title="Accedi al gestionale di questo lido"
+                    >
+                      <Users className="w-3.5 h-3.5 text-indigo-400" />
+                      Accedi
+                    </button>
                     <button
                       onClick={() => handleOpenLidoDetails(lido)}
                       className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-xs font-bold px-3.5 py-2 rounded-xl text-white shadow-md shadow-indigo-600/10 transition-colors"

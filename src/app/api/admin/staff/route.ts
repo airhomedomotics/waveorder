@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
+import { getGestore } from '@/utils/supabase/auth';
 
 // GET: Recupera tutti i membri dello staff del lido
 export async function GET(request: Request) {
@@ -13,13 +14,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
     }
 
-    const { data: gestoreData, error: gestoreError } = await supabase
-      .from('lidi_gestori')
-      .select('lido_id, ruolo')
-      .eq('user_id', user.id)
-      .single();
+    const gestoreData = await getGestore(supabase, user);
 
-    if (gestoreError || !gestoreData || gestoreData.ruolo !== 'admin') {
+    if (!gestoreData || gestoreData.ruolo !== 'admin') {
       return NextResponse.json({ error: 'Operazione riservata all\'amministratore del lido' }, { status: 403 });
     }
 
@@ -51,13 +48,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
     }
 
-    const { data: gestoreData, error: gestoreError } = await supabase
-      .from('lidi_gestori')
-      .select('lido_id, ruolo')
-      .eq('user_id', user.id)
-      .single();
+    const gestoreData = await getGestore(supabase, user);
 
-    if (gestoreError || !gestoreData || gestoreData.ruolo !== 'admin') {
+    if (!gestoreData || gestoreData.ruolo !== 'admin') {
       return NextResponse.json({ error: 'Operazione riservata all\'amministratore del lido' }, { status: 403 });
     }
 
@@ -121,13 +114,9 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
     }
 
-    const { data: gestoreData, error: gestoreError } = await supabase
-      .from('lidi_gestori')
-      .select('lido_id, ruolo')
-      .eq('user_id', user.id)
-      .single();
+    const gestoreData = await getGestore(supabase, user);
 
-    if (gestoreError || !gestoreData || gestoreData.ruolo !== 'admin') {
+    if (!gestoreData || gestoreData.ruolo !== 'admin') {
       return NextResponse.json({ error: 'Operazione riservata all\'amministratore del lido' }, { status: 403 });
     }
 

@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { getGestore } from '@/utils/supabase/auth';
 import { redirect } from 'next/navigation';
 import DashboardClient from './DashboardClient';
 
@@ -14,16 +15,10 @@ export default async function DashboardOrdersPage(props: { searchParams: Promise
     redirect('/login');
   }
 
-  // Verifica che l'utente sia associato a un lido
-  const { data: gestoreList, error: gestoreError } = await supabase
-    .from('lidi_gestori')
-    .select('lido_id, ruolo')
-    .eq('user_id', user.id)
-    .limit(1);
+  // Verifica che l'utente sia associato a un lido (con supporto impersonificazione per Super Admin)
+  const gestore = await getGestore(supabase, user);
 
-  const gestore = gestoreList?.[0];
-
-  if (gestoreError || !gestore) {
+  if (!gestore) {
     // Se non ha un lido, reindirizzalo all'onboarding
     redirect('/dashboard/onboarding');
   }

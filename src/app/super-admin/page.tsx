@@ -1,9 +1,12 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import SuperAdminClient from './SuperAdminClient';
 
 export default async function SuperAdminPage() {
   const supabase = await createClient();
+  const cookieStore = await cookies();
+  const impersonateLidoId = cookieStore.get('waveorder_impersonate_lido_id')?.value || null;
 
   // 1. Verifica autenticazione utente
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -52,6 +55,7 @@ export default async function SuperAdminPage() {
       paidOrders={paidOrders || []}
       cashCommissions={cashCommissions || []}
       candidature={candidature || []}
+      impersonateLidoId={impersonateLidoId}
     />
   );
 }

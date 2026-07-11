@@ -59,9 +59,10 @@ interface LidoAdminClientProps {
   cashCommissions: CashCommission[];
   clientiFidelity: ClienteFidelity[];
   userRole: string;
+  isImpersonating?: boolean;
 }
 
-export default function LidoAdminClient({ lido, orders, cashCommissions, clientiFidelity, userRole }: LidoAdminClientProps) {
+export default function LidoAdminClient({ lido, orders, cashCommissions, clientiFidelity, userRole, isImpersonating }: LidoAdminClientProps) {
   const [activeView, setActiveView] = useState<'hub' | 'analytics' | 'settings' | 'fidelity' | 'staff'>('hub');
   
   // Staff states
@@ -272,8 +273,41 @@ export default function LidoAdminClient({ lido, orders, cashCommissions, clienti
       setIsSaving(false);
     }
   };
+
+  const handleExitImpersonate = async () => {
+    try {
+      const res = await fetch('/api/super-admin/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lido_id: null }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.location.href = '/super-admin';
+      }
+    } catch {
+      alert('Errore di rete');
+    }
+  };
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-6 pb-12">
+      {isImpersonating && (
+        <div className="bg-indigo-900/50 border border-indigo-500/30 text-indigo-200 px-6 py-4 rounded-2xl mb-6 max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl shadow-indigo-950/20 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 bg-emerald-450 rounded-full animate-pulse"></span>
+            <p className="text-xs font-bold uppercase tracking-wider">
+              Accesso effettuato come amministratore temporaneo (Super Admin)
+            </p>
+          </div>
+          <button 
+            onClick={handleExitImpersonate}
+            className="bg-indigo-650 hover:bg-indigo-650/80 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/10 cursor-pointer"
+          >
+            Torna al Super Admin
+          </button>
+        </div>
+      )}
+
       {/* HEADER BREADCRUMB (Visible only inside sub-views) */}
       {activeView !== 'hub' && (
         <header className="flex items-center gap-4 pb-6 border-b border-slate-900 mb-8 max-w-7xl mx-auto">

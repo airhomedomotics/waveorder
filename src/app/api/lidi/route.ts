@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { getGestore } from '@/utils/supabase/auth';
 
 // GET: Recupera il lido associato all'utente loggato, oppure cerca per slug (pubblico)
 export async function GET(request: Request) {
@@ -30,16 +31,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
     }
 
-    // Ottieni il lido a cui appartiene il gestore
-    const { data: gestoreList, error: gestoreError } = await supabase
-      .from('lidi_gestori')
-      .select('lido_id')
-      .eq('user_id', user.id)
-      .limit(1);
+    // Ottieni il lido a cui appartiene il gestore (con supporto impersonificazione per Super Admin)
+    const gestoreData = await getGestore(supabase, user);
 
-    const gestoreData = gestoreList?.[0];
-
-    if (gestoreError || !gestoreData) {
+    if (!gestoreData) {
       return NextResponse.json({ error: 'Nessun lido associato a questo account' }, { status: 404 });
     }
 
@@ -152,14 +147,8 @@ export async function PUT(request: Request) {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    // Recupera lido del gestore (se presente)
-    const { data: gestoreList } = await supabase
-      .from('lidi_gestori')
-      .select('lido_id, ruolo')
-      .eq('user_id', user.id)
-      .limit(1);
-
-    const gestoreData = gestoreList?.[0];
+    // Recupera lido del gestore (con supporto impersonificazione per Super Admin)
+    const gestoreData = await getGestore(supabase, user);
 
     const body = await request.json();
     const {
