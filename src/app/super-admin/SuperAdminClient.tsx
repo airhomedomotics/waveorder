@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, DollarSign, Users, ShieldAlert, Check, X, Plus, Settings, Eye, HelpCircle, Inbox, Phone, Mail, Clock } from 'lucide-react';
+import { TrendingUp, DollarSign, Users, ShieldAlert, Check, X, Plus, Settings, Eye, HelpCircle, Inbox, Phone, Mail, Clock, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 
 interface Lido {
@@ -9,6 +9,7 @@ interface Lido {
   nome_struttura: string;
   slug: string;
   email_amministratore: string;
+  logo_url: string | null;
   tipo_contratto: string;
   quota_commissione_percentuale: number | string;
   canone_mensile_fisso: number | string;
@@ -20,14 +21,19 @@ interface Lido {
   creato_il: string;
 }
 
-interface PaidOrder {
+interface Order {
+  id: string;
   totale: number | string;
   lido_id: string;
   metodo_pagamento: string;
+  stato_pagamento: string;
+  stato: string;
+  creato_il: string;
 }
 
 interface CashCommission {
   importo_commissione: number | string;
+  lido_id: string;
 }
 
 interface Candidatura {
@@ -43,7 +49,7 @@ interface Candidatura {
 
 interface SuperAdminClientProps {
   initialLidi: Lido[];
-  paidOrders: PaidOrder[];
+  paidOrders: Order[];
   cashCommissions: CashCommission[];
   candidature: Candidatura[];
 }
@@ -52,6 +58,17 @@ export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissi
   const [lidi, setLidi] = useState<Lido[]>(initialLidi);
   const [candidature, setCandidature] = useState<Candidatura[]>(initialCandidature);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Stato per la visualizzazione dettagliata del lido (Scheda Cliente & Analisi)
+  const [selectedLido, setSelectedLido] = useState<Lido | null>(null);
+  const [editTipoContratto, setEditTipoContratto] = useState<'commissione_piena' | 'ibrido' | 'stagionale_flat'>('commissione_piena');
+  const [editCommissione, setEditCommissione] = useState<number>(0);
+  const [editCanoneMensile, setEditCanoneMensile] = useState<number>(0);
+  const [editCanoneStagionale, setEditCanoneStagionale] = useState<number>(0);
+  const [editAccettaContanti, setEditAccettaContanti] = useState<boolean>(true);
+  const [editAttivo, setEditAttivo] = useState<boolean>(true);
+  const [isUpdatingLido, setIsUpdatingLido] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
   
   // Campi form nuovo lido
   const [nomeStruttura, setNomeStruttura] = useState('');
@@ -132,26 +149,86 @@ export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissi
     }
   };
 
-  const toggleLidoStatus = async (lidoId: string, currentStatus: boolean) => {
+  const handleOpenLidoDetails = (lido: Lido) => {
+    setSelectedLido(lido);
+    setEditTipoContratto(lido.tipo_contratto as any);
+    setEditCommissione(Number(lido.quota_commissione_percentuale) || 0);
+    setEditCanoneMensile(Number(lido.canone_mensile_fisso) || 0);
+    setEditCanoneStagionale(Number(lido.canone_stagionale_fisso) || 0);
+    setEditAccettaContanti(lido.accetta_contanti);
+    setEditAttivo(lido.attivo);
+    setUpdateError(null);
+  };
+
+  const handleSaveLidoDetails = async () => {
+    if (!selectedLido) return;
+    setIsUpdatingLido(true);
+    setUpdateError(null);
+
     try {
-      // Per motivi di semplicità aggiorniamo direttamente tramite l'API PUT lidi
-      // e impersoniamo la richiesta (avendo permessi admin lato DB tramite bypass RLS)
       const res = await fetch('/api/lidi', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // In Next.js route API, decodifichiamo se l'utente è super admin per consentire modifiche estese.
-          // Nel DB le policy RLS sono abilitate: is_super_admin(auth.uid()) consente di effettuare update sui lidi.
-          // Quindi questa chiamata funzionerà se l'utente è autenticato ed è super_admin.
+          lido_id: selectedLido.id,
+          tipo_contratto: editTipoContratto,
+          quota_commissione_percentuale: editCommissione,
+          canone_mensile_fisso: editCanoneMensile,
+          canone_stagionale_fisso: editCanoneStagionale,
+          accetta_contanti: editAccettaContanti,
+          attivo: editAttivo
         }),
       });
-      // In realtà passiamo lidoId e il nuovo stato attivo
-      // Modifichiamo l'endpoint per consentire ai super admin di passare un body esteso.
-      // Andiamo ad implementare questa logica nell'endpoint `/api/lidi` per supportare il toggle di stato.
-    } catch (e) {
-      console.error(e);
+
+      const data = await res.json();
+      if (data.error) {
+        setUpdateError(data.error);
+      } else if (data.lido) {
+        // Aggiorna la lista dei lidi
+        setLidi(prev => prev.map(l => l.id === selectedLido.id ? data.lido : l));
+        setSelectedLido(data.lido);
+        alert('Struttura lido aggiornata con successo!');
+      }
+    } catch {
+      setUpdateError('Errore di rete durante il salvataggio.');
+    } finally {
+      setIsUpdatingLido(false);
     }
   };
+
+  const selectedLidoStats = useMemo(() => {
+    if (!selectedLido) return null;
+    
+    // Ordini di questo lido specifico
+    const lidoOrders = paidOrders.filter(o => o.lido_id === selectedLido.id);
+    const paidLidoOrders = lidoOrders.filter(o => o.stato_pagamento === 'pagato');
+    
+    const transatoTotale = paidLidoOrders.reduce((sum, o) => sum + Number(o.totale), 0);
+    const transatoStripe = paidLidoOrders.filter(o => o.metodo_pagamento === 'carta_stripe').reduce((sum, o) => sum + Number(o.totale), 0);
+    const transatoContanti = paidLidoOrders.filter(o => o.metodo_pagamento === 'contanti').reduce((sum, o) => sum + Number(o.totale), 0);
+    
+    const commissioniStripe = transatoStripe * (Number(selectedLido.quota_commissione_percentuale) / 100);
+    const commissioniContantiDovute = cashCommissions
+      .filter(c => c.lido_id === selectedLido.id)
+      .reduce((sum, c) => sum + Number(c.importo_commissione), 0);
+      
+    // Calcolo tasso cancellazione contanti
+    const cashOrders = lidoOrders.filter(o => o.metodo_pagamento === 'contanti');
+    const cancelledCashOrders = cashOrders.filter(o => o.stato === 'annullato');
+    const tassoCancellazioneContanti = cashOrders.length > 0 ? (cancelledCashOrders.length / cashOrders.length) * 100 : 0;
+    
+    return {
+      transatoTotale,
+      transatoStripe,
+      transatoContanti,
+      commissioniStripe,
+      commissioniContantiDovute,
+      tassoCancellazioneContanti,
+      totaleOrdini: lidoOrders.length,
+      ordiniCompletati: lidoOrders.filter(o => o.stato === 'consegnato').length,
+      ordiniAnnullati: lidoOrders.filter(o => o.stato === 'annullato').length
+    };
+  }, [selectedLido, paidOrders, cashCommissions]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-6 pb-12">
@@ -284,13 +361,20 @@ export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissi
                     )}
                   </td>
                   <td className="px-6 py-4 text-right space-x-2">
+                    <button
+                      onClick={() => handleOpenLidoDetails(lido)}
+                      className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-xs font-bold px-3.5 py-2 rounded-xl text-white shadow-md shadow-indigo-600/10 transition-colors"
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                      Visualizza
+                    </button>
                     <a
                       href={`/menu/${lido.slug}`}
                       target="_blank"
-                      className="inline-flex items-center gap-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl text-slate-200"
+                      className="inline-flex items-center gap-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold px-3 py-2 rounded-xl text-slate-400 hover:text-slate-200 transition-colors"
+                      title="Apri Menu Cliente"
                     >
                       <Eye className="w-3.5 h-3.5" />
-                      Visualizza
                     </a>
                   </td>
                 </tr>
@@ -474,6 +558,258 @@ export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissi
           )}
         </div>
       </div>
+
+      {/* MODAL DETTAGLI LIDO (SCHEDA CLIENTE E ANALISI DEL TRANSATO) */}
+      {selectedLido && selectedLidoStats && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto relative">
+            
+            {/* HEADER */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-850">
+              <div className="flex items-center gap-3">
+                {selectedLido.logo_url ? (
+                  <img src={selectedLido.logo_url} alt={selectedLido.nome_struttura} className="w-12 h-12 rounded-full object-cover border border-slate-700" />
+                ) : (
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-lg">
+                    {selectedLido.nome_struttura.charAt(0)}
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-extrabold text-xl text-slate-100 flex items-center gap-2">
+                    <span>{selectedLido.nome_struttura}</span>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                      selectedLido.attivo ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                    }`}>
+                      {selectedLido.attivo ? 'Attivo' : 'Sospeso'}
+                    </span>
+                  </h3>
+                  <a href={`https://waveorder.garganoadvisor.com/menu/${selectedLido.slug}`} target="_blank" className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold mt-0.5 block">
+                    Apri Menu: /menu/{selectedLido.slug}
+                  </a>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedLido(null)}
+                className="p-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* GRIGLIA CONTENUTI */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              {/* COLONNA ANALISI TRANSATO (SINISTRA) */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Analisi del Transato</h4>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850">
+                    <span className="block text-[10px] text-slate-500 font-bold uppercase">Transato Totale</span>
+                    <span className="block text-lg font-black text-white mt-1">€{selectedLidoStats.transatoTotale.toFixed(2)}</span>
+                  </div>
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850">
+                    <span className="block text-[10px] text-slate-500 font-bold uppercase">Ordini Totali</span>
+                    <span className="block text-lg font-black text-white mt-1">{selectedLidoStats.totaleOrdini}</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850 space-y-3">
+                  <span className="block text-[10px] text-slate-500 font-bold uppercase">Dettaglio Metodi Pagamento (Saldi Pagati)</span>
+                  
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400 flex items-center gap-1"><CreditCard className="w-3.5 h-3.5 text-sky-400" /> Stripe:</span>
+                    <span className="font-bold text-slate-200">€{selectedLidoStats.transatoStripe.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400 flex items-center gap-1"><DollarSign className="w-3.5 h-3.5 text-emerald-400" /> Contanti:</span>
+                    <span className="font-bold text-slate-200">€{selectedLidoStats.transatoContanti.toFixed(2)}</span>
+                  </div>
+
+                  <div className="border-t border-slate-900 pt-2 space-y-2">
+                    <span className="block text-[10px] text-slate-500 font-bold uppercase">Commissioni Piattaforma Stimate</span>
+                    
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-400">Commissioni Stripe:</span>
+                      <span className="font-bold text-sky-400">€{selectedLidoStats.commissioniStripe.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-400">Commissioni Contanti Dovute:</span>
+                      <span className="font-bold text-emerald-400">€{selectedLidoStats.commissioniContantiDovute.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ANTI-FRODE */}
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850">
+                  <span className="block text-[10px] text-slate-500 font-bold uppercase mb-2">Prevenzione Evasione Contanti</span>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="block text-xs text-slate-400">Tasso di cancellazione contanti:</span>
+                      <span className={`block font-bold text-sm mt-0.5 ${selectedLidoStats.tassoCancellazioneContanti > 10 ? 'text-red-400 animate-pulse' : 'text-slate-200'}`}>
+                        {selectedLidoStats.tassoCancellazioneContanti.toFixed(1)}%
+                      </span>
+                    </div>
+                    {selectedLidoStats.tassoCancellazioneContanti > 10 && (
+                      <span className="bg-red-500/10 text-red-400 border border-red-500/20 text-[9px] font-bold px-2 py-0.5 rounded-full">
+                        Rischio Evasione Alto
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* COLONNA IMPOSTAZIONI CONTRATTO & SUPER ADMIN (DESTRA) */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Configurazione Commerciale & Stato</h4>
+                
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850 space-y-4">
+                  
+                  {updateError && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl font-medium">
+                      {updateError}
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Tipo di Contratto</label>
+                    <select
+                      value={editTipoContratto}
+                      onChange={(e) => setEditTipoContratto(e.target.value as any)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    >
+                      <option value="commissione_piena">Opzione A (Commissione 5%)</option>
+                      <option value="ibrido">Opzione B (Canone 149€/mese + 2%)</option>
+                      <option value="stagionale_flat">Opzione C (Flat Stagionale 900€)</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Quota Comm. %</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={editCommissione}
+                        onChange={(e) => setEditCommissione(Number(e.target.value))}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Fisso Mensile (€)</label>
+                      <input
+                        type="number"
+                        value={editCanoneMensile}
+                        onChange={(e) => setEditCanoneMensile(Number(e.target.value))}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Fisso Stag. (€)</label>
+                      <input
+                        type="number"
+                        value={editCanoneStagionale}
+                        onChange={(e) => setEditCanoneStagionale(Number(e.target.value))}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <div>
+                      <span className="block text-xs font-bold text-slate-300">Stato Funzionamento</span>
+                      <span className="block text-[10px] text-slate-500">Sospendi l'accesso a questo lido</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={editAttivo}
+                      onChange={(e) => setEditAttivo(e.target.checked)}
+                      className="w-5 h-5 rounded border-slate-800 text-indigo-650 bg-slate-950 focus:ring-indigo-500/50 cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-900">
+                    <div>
+                      <span className="block text-xs font-bold text-slate-300">Pagamenti Contanti</span>
+                      <span className="block text-[10px] text-slate-500">Forza riattivazione contanti</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={editAccettaContanti}
+                      onChange={(e) => setEditAccettaContanti(e.target.checked)}
+                      className="w-5 h-5 rounded border-slate-800 text-indigo-650 bg-slate-950 focus:ring-indigo-500/50 cursor-pointer"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleSaveLidoDetails}
+                    disabled={isUpdatingLido}
+                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isUpdatingLido ? (
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    ) : (
+                      'Salva Impostazioni Commerciali'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* SEZIONE ORDINI RECENTI DEL LIDO */}
+            <div className="pt-4 border-t border-slate-850">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3.5">Ultimi Ordini</h4>
+              <div className="bg-slate-950 border border-slate-850 rounded-2xl overflow-hidden">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-900 text-slate-500 font-bold bg-slate-950/40">
+                      <th className="px-4 py-3">Orario</th>
+                      <th className="px-4 py-3">Metodo</th>
+                      <th className="px-4 py-3">Totale</th>
+                      <th className="px-4 py-3">Stato Ordine</th>
+                      <th className="px-4 py-3">Stato Pagamento</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-900 text-slate-300">
+                    {paidOrders
+                      .filter(o => o.lido_id === selectedLido.id)
+                      .slice(0, 5)
+                      .map((o) => (
+                        <tr key={o.id}>
+                          <td className="px-4 py-2.5">{new Date(o.creato_il).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</td>
+                          <td className="px-4 py-2.5 capitalize">{o.metodo_pagamento.replace('_', ' ')}</td>
+                          <td className="px-4 py-2.5 font-bold">€{Number(o.totale).toFixed(2)}</td>
+                          <td className="px-4 py-2.5">
+                            <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] uppercase ${
+                              o.stato === 'consegnato' ? 'bg-emerald-500/10 text-emerald-400' : o.stato === 'annullato' ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'
+                            }`}>
+                              {o.stato}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] uppercase ${
+                              o.stato_pagamento === 'pagato' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                            }`}>
+                              {o.stato_pagamento}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    {paidOrders.filter(o => o.lido_id === selectedLido.id).length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="text-center py-6 text-slate-500 font-medium">
+                          Nessun ordine effettuato per questa struttura
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

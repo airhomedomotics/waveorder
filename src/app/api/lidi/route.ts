@@ -145,8 +145,15 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
     }
 
-    // Recupera lido dell'utente
-    const { data: gestoreList, error: gestoreError } = await supabase
+    // Controlla se è un super admin
+    const { data: superAdmin } = await supabase
+      .from('super_admins')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    // Recupera lido del gestore (se presente)
+    const { data: gestoreList } = await supabase
       .from('lidi_gestori')
       .select('lido_id, ruolo')
       .eq('user_id', user.id)
@@ -154,12 +161,9 @@ export async function PUT(request: Request) {
 
     const gestoreData = gestoreList?.[0];
 
-    if (gestoreError || !gestoreData) {
-      return NextResponse.json({ error: 'Nessun lido associato a questo account' }, { status: 404 });
-    }
-
     const body = await request.json();
     const {
+      lido_id,
       nome_struttura,
       logo_url,
       colore_primario,
@@ -168,8 +172,21 @@ export async function PUT(request: Request) {
       pagamenti_digitali_attivi,
       fidelity_attivo,
       fidelity_soglia_punti,
-      fidelity_valore_sconto
+      fidelity_valore_sconto,
+      // Campi riservati al super_admin
+      tipo_contratto,
+      quota_commissione_percentuale,
+      canone_mensile_fisso,
+      canone_stagionale_fisso,
+      attivo
     } = body;
+
+    // Determina il lido target
+    const targetLidoId = (superAdmin && lido_id) ? lido_id : gestoreData?.lido_id;
+
+    if (!targetLidoId) {
+      return NextResponse.json({ error: 'Struttura lido non specificata o non associata' }, { status: 400 });
+    }
 
     // Crea oggetto di aggiornamento
     const updateData: any = {};
@@ -183,10 +200,19 @@ export async function PUT(request: Request) {
     if (fidelity_soglia_punti !== undefined) updateData.fidelity_soglia_punti = fidelity_soglia_punti;
     if (fidelity_valore_sconto !== undefined) updateData.fidelity_valore_sconto = fidelity_valore_sconto;
 
+    // Campi modificabili solo se super admin
+    if (superAdmin) {
+      if (tipo_contratto !== undefined) updateData.tipo_contratto = tipo_contratto;
+      if (quota_commissione_percentuale !== undefined) updateData.quota_commissione_percentuale = quota_commissione_percentuale;
+      if (canone_mensile_fisso !== undefined) updateData.canone_mensile_fisso = canone_mensile_fisso;
+      if (canone_stagionale_fisso !== undefined) updateData.canone_stagionale_fisso = canone_stagionale_fisso;
+      if (attivo !== undefined) updateData.attivo = attivo;
+    }
+
     const { data: lido, error: updateError } = await supabase
       .from('lidi')
       .update(updateData)
-      .eq('id', gestoreData.lido_id)
+      .eq('id', targetLidoId)
       .select()
       .single();
 
@@ -194,7 +220,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: updateError.message }, { status: 400 });
     }
 
-    return NextResponse.json({ lido, message: 'Lido aggiornato con successo!' });
+    return NextResponse.json({ lido, message: 'Struttura aggiornata con successo!' });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

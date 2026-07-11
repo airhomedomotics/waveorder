@@ -33,10 +33,16 @@ export default async function LidoAdminDashboardPage() {
     .single();
 
   // 4. Calcola statistiche specifiche del lido
-  // - Tutti gli ordini del lido
+  // - Tutti gli ordini del lido con dettagli prodotti per analisi
   const { data: orders } = await supabase
     .from('ordini')
-    .select('totale, metodo_pagamento, stato_pagamento, stato')
+    .select(`
+      id, totale, metodo_pagamento, stato_pagamento, stato, creato_il,
+      dettagli_ordine (
+        quantita,
+        prodotti (nome)
+      )
+    `)
     .eq('lido_id', gestore.lido_id);
 
   // - Commissioni contanti accumulate
@@ -55,7 +61,7 @@ export default async function LidoAdminDashboardPage() {
   return (
     <LidoAdminClient
       lido={lido!}
-      orders={orders || []}
+      orders={(orders as any) || []}
       cashCommissions={cashCommissions || []}
       clientiFidelity={clientiFidelity || []}
     />

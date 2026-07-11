@@ -30,16 +30,15 @@ export default async function SuperAdminPage() {
     .order('creato_il', { ascending: false });
 
   // 4. Calcola statistiche globali della piattaforma
-  // - Ordini digitali pagati
+  // - Ordini del lido per statistiche
   const { data: paidOrders } = await supabase
     .from('ordini')
-    .select('totale, lido_id, metodo_pagamento')
-    .eq('stato_pagamento', 'pagato');
+    .select('id, totale, lido_id, metodo_pagamento, stato_pagamento, stato, creato_il');
 
   // - Commissioni contanti registrate
   const { data: cashCommissions } = await supabase
     .from('commissioni_contanti')
-    .select('importo_commissione');
+    .select('importo_commissione, lido_id');
 
   // - Candidature ricevute
   const { data: candidature } = await supabase

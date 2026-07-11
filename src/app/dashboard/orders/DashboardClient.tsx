@@ -153,11 +153,13 @@ export default function DashboardClient({ lido, initialOrders, userRole }: Dashb
         body: JSON.stringify({ id: orderId, stato: nextStato }),
       });
       const data = await res.json();
-      if (data.order) {
+      if (res.ok && data.order) {
         setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, stato: nextStato } : o)));
+      } else {
+        alert(`Errore aggiornamento comanda: ${data.error || 'Risposta del server non valida'}`);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      alert(`Errore di rete KDS: ${e.message || e}`);
     }
   };
 
