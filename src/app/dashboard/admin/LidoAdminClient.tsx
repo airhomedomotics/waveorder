@@ -419,9 +419,22 @@ export default function LidoAdminClient({ lido, orders, cashCommissions, clienti
               </div>
 
               <button
-                disabled
-                className="w-full py-4 text-center bg-slate-800 border border-slate-700 text-slate-400 font-bold rounded-2xl text-xs uppercase tracking-wider cursor-not-allowed"
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/stripe/onboarding', { method: 'POST' });
+                    const data = await res.json();
+                    if (data.url) {
+                      window.location.href = data.url;
+                    } else {
+                      alert(data.error || 'Errore durante la creazione dell\'account Stripe');
+                    }
+                  } catch {
+                    alert('Errore di rete. Riprova.');
+                  }
+                }}
+                className="w-full py-4 text-center bg-indigo-650 hover:bg-indigo-600 text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-lg transition-colors flex items-center justify-center gap-2"
               >
+                <CreditCard className="w-4 h-4" />
                 Connetti Stripe Connect
               </button>
             </div>

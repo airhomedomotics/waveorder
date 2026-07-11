@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, DollarSign, Users, ShieldAlert, Check, X, Plus, Settings, Eye, HelpCircle } from 'lucide-react';
+import { TrendingUp, DollarSign, Users, ShieldAlert, Check, X, Plus, Settings, Eye, HelpCircle, Inbox, Phone, Mail, Clock } from 'lucide-react';
 import Link from 'next/link';
 
 interface Lido {
@@ -30,14 +30,27 @@ interface CashCommission {
   importo_commissione: number | string;
 }
 
+interface Candidatura {
+  id: string;
+  nome_contatto: string;
+  email_contatto: string | null;
+  telefono_contatto: string | null;
+  nome_lido: string;
+  piano_preferito: string;
+  stato: 'nuova' | 'contattato' | 'approvata' | 'rifiutata';
+  creato_il: string;
+}
+
 interface SuperAdminClientProps {
   initialLidi: Lido[];
   paidOrders: PaidOrder[];
   cashCommissions: CashCommission[];
+  candidature: Candidatura[];
 }
 
-export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissions }: SuperAdminClientProps) {
+export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissions, candidature: initialCandidature }: SuperAdminClientProps) {
   const [lidi, setLidi] = useState<Lido[]>(initialLidi);
+  const [candidature, setCandidature] = useState<Candidatura[]>(initialCandidature);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Campi form nuovo lido
@@ -361,6 +374,106 @@ export default function SuperAdminClient({ initialLidi, paidOrders, cashCommissi
           </div>
         </div>
       )}
+
+      {/* SEZIONE CANDIDATURE */}
+      <div className="max-w-7xl mx-auto mt-10">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-6.5">
+          <div className="flex items-center gap-3 pb-5 border-b border-slate-900">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+              <Inbox className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="font-extrabold text-lg text-slate-100">Candidature Lidi</h2>
+              <p className="text-xs text-slate-500">{candidature.filter(c => c.stato === 'nuova').length} nuove su {candidature.length} totali</p>
+            </div>
+          </div>
+
+          {candidature.length === 0 ? (
+            <div className="py-12 text-center">
+              <Inbox className="w-10 h-10 text-slate-700 mx-auto mb-3" />
+              <p className="text-sm text-slate-500 font-medium">Nessuna candidatura ricevuta</p>
+            </div>
+          ) : (
+            <div className="mt-5 space-y-3 max-h-[500px] overflow-y-auto pr-1">
+              {candidature.map((c) => {
+                const statusConfig: Record<string, { label: string; color: string }> = {
+                  nuova: { label: 'Nuova', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+                  contattato: { label: 'Contattato', color: 'bg-sky-500/10 text-sky-400 border-sky-500/20' },
+                  approvata: { label: 'Approvata', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+                  rifiutata: { label: 'Rifiutata', color: 'bg-red-500/10 text-red-400 border-red-500/20' },
+                };
+                const st = statusConfig[c.stato] || statusConfig.nuova;
+
+                return (
+                  <div key={c.id} className="bg-slate-950/50 border border-slate-900 rounded-2xl p-5 hover:border-slate-800 transition-colors">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h4 className="font-bold text-sm text-slate-200">{c.nome_lido}</h4>
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${st.color}`}>
+                            {st.label}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400">
+                          <span className="font-medium text-slate-300">{c.nome_contatto}</span>
+                        </p>
+                        <div className="flex items-center gap-4 mt-2">
+                          {c.telefono_contatto && (
+                            <a href={`tel:${c.telefono_contatto}`} className="flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 font-medium">
+                              <Phone className="w-3 h-3" />
+                              {c.telefono_contatto}
+                            </a>
+                          )}
+                          {c.email_contatto && (
+                            <a href={`mailto:${c.email_contatto}`} className="flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 font-medium">
+                              <Mail className="w-3 h-3" />
+                              {c.email_contatto}
+                            </a>
+                          )}
+                          <span className="flex items-center gap-1 text-[10px] text-slate-600">
+                            <Clock className="w-3 h-3" />
+                            {new Date(c.creato_il).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* AZIONI */}
+                      <div className="flex gap-2 shrink-0">
+                        {c.stato === 'nuova' && (
+                          <button
+                            onClick={async () => {
+                              const { createClient } = await import('@/utils/supabase/client');
+                              const supabase = createClient();
+                              await supabase.from('candidature').update({ stato: 'contattato' }).eq('id', c.id);
+                              setCandidature(prev => prev.map(x => x.id === c.id ? { ...x, stato: 'contattato' } : x));
+                            }}
+                            className="px-3 py-1.5 bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-xl text-[10px] font-bold hover:bg-sky-500/20 transition-colors"
+                          >
+                            Contattato
+                          </button>
+                        )}
+                        {(c.stato === 'nuova' || c.stato === 'contattato') && (
+                          <button
+                            onClick={async () => {
+                              const { createClient } = await import('@/utils/supabase/client');
+                              const supabase = createClient();
+                              await supabase.from('candidature').update({ stato: 'approvata' }).eq('id', c.id);
+                              setCandidature(prev => prev.map(x => x.id === c.id ? { ...x, stato: 'approvata' } : x));
+                            }}
+                            className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-[10px] font-bold hover:bg-emerald-500/20 transition-colors"
+                          >
+                            Approva
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

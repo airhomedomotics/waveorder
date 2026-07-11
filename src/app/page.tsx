@@ -23,7 +23,11 @@ export default function LandingPage() {
   const [transitoMensile, setTransitoMensile] = useState<number>(30000);
   const [nomeContatto, setNomeContatto] = useState('');
   const [lidoContatto, setLidoContatto] = useState('');
+  const [emailContatto, setEmailContatto] = useState('');
+  const [telefonoContatto, setTelefonoContatto] = useState('');
   const [formInviato, setFormInviato] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Calcolo dei piani
   const calcoloPiani = () => {
@@ -41,10 +45,35 @@ export default function LandingPage() {
 
   const { costoPiena, costoIbrido, costoFlat } = calcoloPiani();
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (nomeContatto.trim() && lidoContatto.trim()) {
-      setFormInviato(true);
+    if (!nomeContatto.trim() || !lidoContatto.trim()) return;
+
+    setFormLoading(true);
+    setFormError(null);
+
+    try {
+      const res = await fetch('/api/candidature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome_contatto: nomeContatto,
+          email_contatto: emailContatto,
+          telefono_contatto: telefonoContatto,
+          nome_lido: lidoContatto,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.error) {
+        setFormError(data.error);
+      } else {
+        setFormInviato(true);
+      }
+    } catch {
+      setFormError('Errore di rete. Riprova.');
+    } finally {
+      setFormLoading(false);
     }
   };
 
@@ -438,11 +467,43 @@ export default function LandingPage() {
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                 />
               </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Email</label>
+                <input 
+                  type="email" 
+                  placeholder="mario@email.com"
+                  value={emailContatto}
+                  onChange={(e) => setEmailContatto(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Telefono</label>
+                <input 
+                  type="tel" 
+                  placeholder="Es. 333 1234567"
+                  value={telefonoContatto}
+                  onChange={(e) => setTelefonoContatto(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+              </div>
+
+              {formError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl font-medium">
+                  {formError}
+                </div>
+              )}
+
               <button 
                 type="submit"
-                className="w-full py-4 bg-gradient-to-r from-indigo-600 to-sky-500 hover:from-indigo-500 hover:to-sky-400 text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-lg transition-all duration-200 hover:-translate-y-0.5"
+                disabled={formLoading}
+                className="w-full py-4 bg-gradient-to-r from-indigo-600 to-sky-500 hover:from-indigo-500 hover:to-sky-400 text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-lg transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                Invia Candidatura
+                {formLoading ? (
+                  <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                ) : (
+                  'Invia Candidatura'
+                )}
               </button>
             </form>
           )}

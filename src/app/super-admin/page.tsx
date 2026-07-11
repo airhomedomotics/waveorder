@@ -41,11 +41,18 @@ export default async function SuperAdminPage() {
     .from('commissioni_contanti')
     .select('importo_commissione');
 
+  // - Candidature ricevute
+  const { data: candidature } = await supabase
+    .from('candidature')
+    .select('*')
+    .order('creato_il', { ascending: false });
+
   return (
     <SuperAdminClient
       initialLidi={lidi || []}
       paidOrders={paidOrders || []}
       cashCommissions={cashCommissions || []}
+      candidature={candidature || []}
     />
   );
 }
