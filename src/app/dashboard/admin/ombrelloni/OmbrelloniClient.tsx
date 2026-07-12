@@ -40,7 +40,7 @@ export default function OmbrelloniClient({ lidoId, lidoSlug, initialOmbrelloni }
 
     const items = [];
     for (let i = numeroInizio; i <= numeroFine; i++) {
-      const code = `${filaPrefix.trim()} - Num ${i}`;
+      const code = `${filaPrefix.trim()} - Ombrellone ${i}`;
       // Genera un token casuale per il QR
       const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       
@@ -154,7 +154,7 @@ export default function OmbrelloniClient({ lidoId, lidoSlug, initialOmbrelloni }
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Da Numero</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Da Ombrellone</label>
                 <input
                   type="number"
                   required
@@ -164,7 +164,7 @@ export default function OmbrelloniClient({ lidoId, lidoSlug, initialOmbrelloni }
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">A Numero</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">A Ombrellone</label>
                 <input
                   type="number"
                   required
