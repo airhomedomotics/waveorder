@@ -58,6 +58,7 @@ export async function POST(request: Request) {
         colore_primario: '#6366f1',
         attivo: true,
         accetta_contanti: true,
+        email_amministratore: email,
       })
       .select()
       .single();
