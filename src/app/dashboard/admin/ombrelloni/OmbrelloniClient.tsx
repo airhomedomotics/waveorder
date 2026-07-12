@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Plus, ArrowLeft, QrCode, Printer, Trash2, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface Ombrellone {
   id: string;
@@ -212,11 +213,24 @@ export default function OmbrelloniClient({ lidoId, lidoSlug, initialOmbrelloni }
                       <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Scansiona per Ordinare</p>
                     </div>
 
-                    <img
-                      src={qrImageSrc}
-                      alt={`QR Code ${omb.codice_identificativo}`}
-                      className="w-40 h-40 object-contain rounded-2xl border border-slate-800 bg-white p-2.5 print:border-black print:rounded-none"
-                    />
+                    <div className="bg-white p-2.5 rounded-2xl border border-slate-800 print:border-black print:rounded-none">
+                      <QRCodeSVG
+                        value={targetUrl}
+                        size={160}
+                        bgColor="#ffffff"
+                        fgColor="#000000"
+                        level="H"
+                        includeMargin={false}
+                        imageSettings={{
+                          src: "/assets/waveorder_logo_small.png", // Usa un logo o semplicemente W
+                          x: undefined,
+                          y: undefined,
+                          height: 40,
+                          width: 40,
+                          excavate: true,
+                        }}
+                      />
+                    </div>
 
                     <div>
                       <h3 className="font-extrabold text-base text-slate-200 print:text-black">{omb.codice_identificativo}</h3>
