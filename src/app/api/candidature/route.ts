@@ -45,7 +45,7 @@ export async function POST(request: Request) {
             'Authorization': `Bearer ${resendKey}`,
           },
           body: JSON.stringify({
-            from: 'WaveOrder <noreply@waveorder.garganoadvisor.com>',
+            from: 'WaveOrder Demo <onboarding@resend.dev>',
             to: [NOTIFICATION_EMAIL],
             subject: `🏖️ Nuova Candidatura: ${nome_lido.trim()}`,
             html: `
