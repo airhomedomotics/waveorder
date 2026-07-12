@@ -129,7 +129,7 @@ export default function LandingPage() {
           </h2>
 
           <p className="text-base md:text-lg text-slate-400 leading-relaxed max-w-xl">
-            WaveOrder consente ai tuoi clienti di scansionare un QR Code unico, scorrere il menu ed ordinare drink e cibo direttamente dal proprio lettino. Pagamenti digitali istantanei, meno code e zero commissioni evase.
+            Offri ai tuoi clienti un servizio Premium. Menu digitale tramite QR Code, ordini diretti dal lettino, pagamenti immediati sul tuo conto e fine delle lunghe code al bar. Aumenta lo scontrino medio e migliora l'efficienza del tuo lido.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
@@ -151,15 +151,15 @@ export default function LandingPage() {
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 pt-6 text-slate-500 text-xs font-semibold uppercase tracking-wider">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4.5 h-4.5 text-emerald-500" />
-              <span>Conforme Stripe Connect</span>
+              <span>Zero Costi Nascosti</span>
             </div>
             <div className="flex items-center gap-2">
               <Zap className="w-4.5 h-4.5 text-sky-400" />
-              <span>Attivazione in 24 Ore</span>
+              <span>Setup in 24 Ore</span>
             </div>
             <div className="flex items-center gap-2">
-              <Users className="w-4.5 h-4.5 text-indigo-400" />
-              <span>Multi-Tenant Isolato</span>
+              <TrendingUp className="w-4.5 h-4.5 text-indigo-400" />
+              <span>+ Ricavi, - Attese</span>
             </div>
           </div>
         </div>
@@ -217,10 +217,10 @@ export default function LandingPage() {
       <section id="features" className="bg-slate-900/30 border-y border-slate-900 px-6 py-24">
         <div className="max-w-7xl mx-auto">
           <div className="text-center space-y-4 max-w-2xl mx-auto mb-16">
-            <h3 className="text-xs font-black tracking-widest text-indigo-400 uppercase">La Nostra Tecnologia</h3>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white">Niente barriere, solo vendite.</h2>
+            <h3 className="text-xs font-black tracking-widest text-indigo-400 uppercase">I Vantaggi per il tuo Lido</h3>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white">Niente code, più ordini, zero stress.</h2>
             <p className="text-slate-400 text-sm md:text-base leading-relaxed">
-              Abbiamo studiato ogni dettaglio per eliminare le frizioni del cliente e impedire comportamenti scorretti dei gestori sulle commissioni.
+              Abbiamo studiato WaveOrder per semplificare il lavoro del tuo staff e massimizzare gli incassi durante le ore di punta, offrendo un servizio impeccabile ai tuoi clienti.
             </p>
           </div>
 
@@ -232,18 +232,18 @@ export default function LandingPage() {
               </div>
               <h4 className="font-bold text-lg text-slate-100">Zero App da scaricare</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Il cliente inquadra semplicemente il QR Code dell'ombrellone. Il menu si apre istantaneamente sul browser in formato PWA super-leggero.
+                Il cliente inquadra semplicemente il QR Code dell'ombrellone. Il menu si apre istantaneamente sul browser dello smartphone senza passaggi noiosi.
               </p>
             </div>
 
             {/* Feat 2 */}
             <div className="bg-slate-900 border border-slate-850 p-6 rounded-3xl space-y-4 transition-all duration-300 hover:border-slate-700/40">
-              <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
-                <CreditCard className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                <DollarSign className="w-6 h-6" />
               </div>
-              <h4 className="font-bold text-lg text-slate-100">Split Payment Istantaneo</h4>
+              <h4 className="font-bold text-lg text-slate-100">Pagamenti Diretti & Sicuri</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Grazie a Stripe Connect, l'incasso viene diviso all'istante alla fonte: la quota del lido va sul suo conto, e la commissione software va direttamente al tuo.
+                Gli incassi tramite carta di credito e Apple/Google Pay arrivano direttamente e in tempo reale sul conto corrente del tuo stabilimento, in totale sicurezza.
               </p>
             </div>
 
@@ -252,20 +252,20 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
                 <Smartphone className="w-6 h-6" />
               </div>
-              <h4 className="font-bold text-lg text-slate-100">Dashboard Realtime</h4>
+              <h4 className="font-bold text-lg text-slate-100">Bar & Cucina Sincronizzati</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Il bar riceve le comande sul tablet in tempo reale con avviso acustico. Possono gestire gli ordini in colonne con un semplice tocco.
+                KDS (Kitchen Display System) su tablet per gestire le comande senza carta e senza errori. Lo staff riceve gli ordini in modo ordinato per reparto.
               </p>
             </div>
 
             {/* Feat 4 */}
             <div className="bg-slate-900 border border-slate-850 p-6 rounded-3xl space-y-4 transition-all duration-300 hover:border-slate-700/40">
-              <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center">
-                <ShieldAlert className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
+                <ShieldCheck className="w-6 h-6" />
               </div>
-              <h4 className="font-bold text-lg text-slate-100">Sistema Anti-Frode Contanti</h4>
+              <h4 className="font-bold text-lg text-slate-100">Gestione Contanti Sicura</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Nessun furbetto: se il gestore annulla un ordine in contanti già preparato, inviamo un alert al cliente. Se supera il 10% di cancellazioni settimanali, il contante si disattiva.
+                Puoi decidere tu se accettare anche pagamenti in contanti sotto l'ombrellone o solo carte, con un sistema di avvisi automatici che tutela il tuo lavoro.
               </p>
             </div>
           </div>
@@ -276,10 +276,10 @@ export default function LandingPage() {
       <section id="simulator" className="px-6 py-24 max-w-7xl mx-auto">
         <div className="bg-slate-900 border border-slate-850 rounded-[2.5rem] p-8 md:p-12 flex flex-col lg:flex-row gap-12 items-center">
           <div className="flex-1 space-y-6">
-            <h3 className="text-xs font-black tracking-widest text-indigo-400 uppercase">Simulatore di Costi per il tuo Lido</h3>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white">Trova il piano ideale per te</h2>
+            <h3 className="text-xs font-black tracking-widest text-indigo-400 uppercase">Calcola il tuo ROI</h3>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white">Scopri l'impatto sul tuo lido</h2>
             <p className="text-slate-400 text-sm md:text-base leading-relaxed">
-              Muovi il cursore per simulare il transato mensile stimato delle tue ordinazioni e vedi subito quanto ti costerebbe il servizio nei diversi piani.
+              Muovi il cursore per simulare l'incasso mensile extra stimato generato dagli ordini all'ombrellone, e scopri qual è il piano tariffario più conveniente per te.
             </p>
             
             {/* SLIDER */}
@@ -350,10 +350,10 @@ export default function LandingPage() {
       <section id="pricing" className="bg-slate-900/30 border-y border-slate-900 px-6 py-24">
         <div className="max-w-7xl mx-auto">
           <div className="text-center space-y-4 max-w-2xl mx-auto mb-16">
-            <h3 className="text-xs font-black tracking-widest text-indigo-400 uppercase">Tariffe Commerciali</h3>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white">Flessibilità totale per i lidi.</h2>
+            <h3 className="text-xs font-black tracking-widest text-indigo-400 uppercase">Tariffe Trasparenti</h3>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white">Scegli il piano su misura per te.</h2>
             <p className="text-slate-400 text-sm md:text-base leading-relaxed">
-              Tre opzioni commerciali pensate per convincere anche il gestore più diffidente.
+              Sappiamo che ogni stabilimento ha esigenze diverse. Per questo offriamo tre opzioni chiare, senza costi nascosti e con la massima flessibilità.
             </p>
           </div>
 
@@ -395,9 +395,9 @@ export default function LandingPage() {
                 </div>
                 <ul className="space-y-3.5 text-xs text-slate-200">
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Supporto prioritario 7/7</li>
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Stampanti termiche incluse</li>
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Reportistiche avanzate</li>
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Logica anti-evasione avanzata</li>
+                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> KDS e gestione ordini inclusa</li>
+                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Reportistiche avanzate incassi</li>
+                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Zero commissioni sulle mance</li>
                 </ul>
               </div>
               <a href="#contact" className="w-full py-4 text-center bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl transition-all duration-200 text-xs uppercase tracking-wider shadow-lg shadow-indigo-600/20">Scegli Ibrido</a>
@@ -431,8 +431,8 @@ export default function LandingPage() {
       <section id="contact" className="px-6 py-24 max-w-md mx-auto">
         <div className="bg-slate-900 border border-slate-850 p-8 rounded-3xl shadow-2xl space-y-6">
           <div className="text-center space-y-1">
-            <h3 className="font-extrabold text-xl text-slate-100">Diventa Partner</h3>
-            <p className="text-xs text-slate-400">Lascia i tuoi dati e ti ricontatteremo entro 2 ore</p>
+            <h3 className="font-extrabold text-xl text-slate-100">Richiedi una Demo</h3>
+            <p className="text-xs text-slate-400">Lascia i tuoi dati: un nostro esperto ti mostrerà come aumentare i ricavi.</p>
           </div>
 
           {formInviato ? (
@@ -440,7 +440,7 @@ export default function LandingPage() {
               <Check className="w-8 h-8 animate-bounce" />
               <div>
                 <h4 className="font-bold text-sm">Richiesta Ricevuta!</h4>
-                <p className="text-xs text-slate-400 mt-1">Un nostro consulente WaveOrder ti contatterà al più presto.</p>
+                <p className="text-xs text-slate-400 mt-1">Un esperto WaveOrder ti contatterà al più presto per la tua demo gratuita.</p>
               </div>
             </div>
           ) : (
