@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, DollarSign, Users, ShieldAlert, Check, X, Plus, Settings, Eye, HelpCircle, Inbox, Phone, Mail, Clock, CreditCard } from 'lucide-react';
+import { TrendingUp, DollarSign, Users, ShieldAlert, Check, X, Plus, Settings, Eye, Inbox, Phone, Mail, Clock, CreditCard, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
 interface Lido {
@@ -113,7 +113,6 @@ export default function SuperAdminClient({
   const stats = useMemo(() => {
     const totalTransacted = paidOrders.reduce((sum, o) => sum + Number(o.totale), 0);
     
-    // Calcola commissioni digitali lorde stimate
     let digitalCommissions = 0;
     paidOrders.forEach((order) => {
       if (order.metodo_pagamento === 'carta_stripe') {
@@ -135,7 +134,6 @@ export default function SuperAdminClient({
     };
   }, [lidi, paidOrders, cashCommissions]);
 
-  // Genera lo slug automaticamente inserendo caratteri minuscoli separati da trattini
   const handleNomeChange = (val: string) => {
     setNomeStruttura(val);
     const generatedSlug = val
@@ -156,20 +154,14 @@ export default function SuperAdminClient({
       const res = await fetch('/api/lidi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome_struttura: nomeStruttura,
-          slug,
-          tipo_contratto: tipoContratto,
-        }),
+        body: JSON.stringify({ nome_struttura: nomeStruttura, slug, tipo_contratto: tipoContratto }),
       });
 
       const data = await res.json();
-      if (data.error) {
-        setErrorMsg(data.error);
-      } else if (data.lido) {
+      if (data.error) setErrorMsg(data.error);
+      else if (data.lido) {
         setLidi((prev) => [data.lido, ...prev]);
         setIsModalOpen(false);
-        // Reset form
         setNomeStruttura('');
         setSlug('');
         setTipoContratto('commissione_piena');
@@ -190,11 +182,7 @@ export default function SuperAdminClient({
       });
       const data = await res.json();
       if (data.success) {
-        if (lidoId) {
-          window.location.href = '/dashboard/admin';
-        } else {
-          window.location.reload();
-        }
+        window.location.href = lidoId ? '/dashboard/admin' : '/super-admin';
       } else {
         alert(data.error || 'Errore durante l\'impersonificazione');
       }
@@ -235,10 +223,8 @@ export default function SuperAdminClient({
       });
 
       const data = await res.json();
-      if (data.error) {
-        setUpdateError(data.error);
-      } else if (data.lido) {
-        // Aggiorna la lista dei lidi
+      if (data.error) setUpdateError(data.error);
+      else if (data.lido) {
         setLidi(prev => prev.map(l => l.id === selectedLido.id ? data.lido : l));
         setSelectedLido(data.lido);
         alert('Struttura lido aggiornata con successo!');
@@ -253,7 +239,6 @@ export default function SuperAdminClient({
   const selectedLidoStats = useMemo(() => {
     if (!selectedLido) return null;
     
-    // Ordini di questo lido specifico
     const lidoOrders = paidOrders.filter(o => o.lido_id === selectedLido.id);
     const paidLidoOrders = lidoOrders.filter(o => o.stato_pagamento === 'pagato');
     
@@ -266,7 +251,6 @@ export default function SuperAdminClient({
       .filter(c => c.lido_id === selectedLido.id)
       .reduce((sum, c) => sum + Number(c.importo_commissione), 0);
       
-    // Calcolo tasso cancellazione contanti
     const cashOrders = lidoOrders.filter(o => o.metodo_pagamento === 'contanti');
     const cancelledCashOrders = cashOrders.filter(o => o.stato === 'annullato');
     const tassoCancellazioneContanti = cashOrders.length > 0 ? (cancelledCashOrders.length / cashOrders.length) * 100 : 0;
@@ -285,250 +269,395 @@ export default function SuperAdminClient({
   }, [selectedLido, paidOrders, cashCommissions]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-6 pb-12">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-12 overflow-x-hidden selection:bg-indigo-500/30">
       {impersonateLidoId && (
-        <div className="bg-indigo-900/50 border border-indigo-500/30 text-indigo-200 px-6 py-4 rounded-2xl mb-6 max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl shadow-indigo-950/20 backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <span className="w-2.5 h-2.5 bg-emerald-450 rounded-full animate-pulse"></span>
-            <p className="text-xs font-bold uppercase tracking-wider">
-              Impersonificazione attiva: <strong className="text-white font-black">{lidi.find(l => l.id === impersonateLidoId)?.nome_struttura || 'Stabilimento'}</strong>
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Link 
-              href="/dashboard/admin"
-              className="bg-indigo-650 hover:bg-indigo-650/80 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/10"
-            >
-              Gestisci Lido
-            </Link>
-            <button 
-              onClick={() => handleImpersonate(null)}
-              className="bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-300 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
-            >
-              Esci
-            </button>
+        <div className="bg-gradient-to-r from-indigo-900/80 to-purple-900/80 border-b border-indigo-500/30 text-indigo-200 px-4 py-3 sm:px-6 sm:py-4 mb-6 sticky top-0 z-50 backdrop-blur-xl shadow-lg shadow-indigo-900/20">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 bg-emerald-450 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+              <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-center sm:text-left">
+                Impersonificazione attiva: <strong className="text-white font-black">{lidi.find(l => l.id === impersonateLidoId)?.nome_struttura || 'Stabilimento'}</strong>
+              </p>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Link 
+                href="/dashboard/admin"
+                className="flex-1 sm:flex-none text-center bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md"
+              >
+                Gestisci
+              </Link>
+              <button 
+                onClick={() => handleImpersonate(null)}
+                className="flex-1 sm:flex-none text-center bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-300 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+              >
+                Esci
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* HEADER */}
-      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-900 mb-8 max-w-7xl mx-auto">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-300">
-            Wave<span className="text-indigo-400">Order</span> Super-Admin
-          </h1>
-          <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider font-bold">
-            Pannello di controllo globale della piattaforma SaaS
-          </p>
-        </div>
+      <header className="px-4 sm:px-6 pt-6 sm:pt-8 pb-6 border-b border-slate-900/50 mb-8 max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-indigo-400">
+              WaveOrder<span className="text-indigo-500 text-2xl sm:text-3xl">.HQ</span>
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-2 uppercase tracking-widest font-bold">
+              Pannello di Controllo SaaS Globale
+            </p>
+          </div>
 
-        <div className="flex gap-3">
-          <Link
-            href="/dashboard/orders"
-            className="bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-200 font-bold px-5 py-3 rounded-xl text-sm flex items-center gap-2 transition-all duration-200"
-          >
-            Vai al Lido Demo
-          </Link>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-3 rounded-xl text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/25 transition-all duration-200"
-          >
-            <Plus className="w-4 h-4" />
-            Aggiungi Stabilimento
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-5 py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all duration-300 active:scale-95"
+            >
+              <Plus className="w-5 h-5" />
+              Nuovo Stabilimento
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* CARDS METRICHE */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto mb-10">
-        {/* Card 1: Transato */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5.5 flex items-center gap-4.5">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
-            <TrendingUp className="w-6 h-6" />
+      {/* CARDS METRICHE SCORREVOLI SU MOBILE */}
+      <div className="px-4 sm:px-6 max-w-7xl mx-auto mb-10">
+        <div className="flex overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 snap-x snap-mandatory scrollbar-hide">
+          {/* Card 1: Transato */}
+          <div className="snap-center shrink-0 w-[85vw] sm:w-auto bg-gradient-to-br from-slate-900/80 to-slate-900/40 backdrop-blur-xl border border-slate-800/60 rounded-[2rem] p-6 flex flex-col justify-between shadow-xl relative overflow-hidden group">
+            <div className="absolute -right-6 -top-6 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all"></div>
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-4 border border-indigo-500/20">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Transato Totale</span>
+              <span className="block text-3xl font-black text-white mt-1 tracking-tight">€{stats.totalTransacted.toLocaleString('it-IT', { maximumFractionDigits: 0 })}</span>
+            </div>
           </div>
-          <div>
-            <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Transato Totale</span>
-            <span className="block text-2xl font-black text-white mt-0.5">€{stats.totalTransacted.toLocaleString('it-IT', { maximumFractionDigits: 0 })}</span>
-          </div>
-        </div>
 
-        {/* Card 2: Comm digitali */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5.5 flex items-center gap-4.5">
-          <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
-            <DollarSign className="w-6 h-6" />
+          {/* Card 2: Comm digitali */}
+          <div className="snap-center shrink-0 w-[85vw] sm:w-auto bg-gradient-to-br from-slate-900/80 to-slate-900/40 backdrop-blur-xl border border-slate-800/60 rounded-[2rem] p-6 flex flex-col justify-between shadow-xl relative overflow-hidden group">
+            <div className="absolute -right-6 -top-6 w-24 h-24 bg-sky-500/10 rounded-full blur-2xl group-hover:bg-sky-500/20 transition-all"></div>
+            <div className="w-12 h-12 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center mb-4 border border-sky-500/20">
+              <DollarSign className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Comm. Stripe</span>
+              <span className="block text-3xl font-black text-sky-400 mt-1 tracking-tight">€{stats.digitalCommissions.toLocaleString('it-IT', { maximumFractionDigits: 0 })}</span>
+            </div>
           </div>
-          <div>
-            <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Comm. Stripe Connect</span>
-            <span className="block text-2xl font-black text-sky-400 mt-0.5">€{stats.digitalCommissions.toLocaleString('it-IT', { maximumFractionDigits: 0 })}</span>
-          </div>
-        </div>
 
-        {/* Card 3: Comm contanti */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5.5 flex items-center gap-4.5">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-            <ShieldAlert className="w-6 h-6" />
+          {/* Card 3: Comm contanti */}
+          <div className="snap-center shrink-0 w-[85vw] sm:w-auto bg-gradient-to-br from-slate-900/80 to-slate-900/40 backdrop-blur-xl border border-slate-800/60 rounded-[2rem] p-6 flex flex-col justify-between shadow-xl relative overflow-hidden group">
+             <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all"></div>
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-4 border border-emerald-500/20">
+              <ShieldAlert className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Comm. Contanti</span>
+              <span className="block text-3xl font-black text-emerald-400 mt-1 tracking-tight">€{stats.totalCashCommissions.toLocaleString('it-IT', { maximumFractionDigits: 0 })}</span>
+            </div>
           </div>
-          <div>
-            <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Commissioni Contanti</span>
-            <span className="block text-2xl font-black text-emerald-400 mt-0.5">€{stats.totalCashCommissions.toLocaleString('it-IT', { maximumFractionDigits: 0 })}</span>
-          </div>
-        </div>
 
-        {/* Card 4: Lidi */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5.5 flex items-center gap-4.5">
-          <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Stabilimenti Attivi</span>
-            <span className="block text-2xl font-black text-white mt-0.5">{stats.activeLidiCount} / {lidi.length}</span>
+          {/* Card 4: Lidi */}
+          <div className="snap-center shrink-0 w-[85vw] sm:w-auto bg-gradient-to-br from-slate-900/80 to-slate-900/40 backdrop-blur-xl border border-slate-800/60 rounded-[2rem] p-6 flex flex-col justify-between shadow-xl relative overflow-hidden group">
+             <div className="absolute -right-6 -top-6 w-24 h-24 bg-slate-500/10 rounded-full blur-2xl group-hover:bg-slate-500/20 transition-all"></div>
+            <div className="w-12 h-12 rounded-2xl bg-slate-800/80 text-slate-300 flex items-center justify-center mb-4 border border-slate-700">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stabilimenti Attivi</span>
+              <span className="block text-3xl font-black text-white mt-1 tracking-tight">{stats.activeLidiCount} <span className="text-lg text-slate-500">/ {lidi.length}</span></span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* TABELLA DEI LIDI */}
-      <main className="max-w-7xl mx-auto bg-slate-900/40 border border-slate-900 rounded-3xl overflow-hidden shadow-xl">
-        <div className="px-6 py-5 border-b border-slate-900 flex justify-between items-center">
-          <h2 className="font-extrabold text-lg text-slate-100">Stabilimenti Registrati</h2>
-        </div>
+      <div className="px-4 sm:px-6 max-w-7xl mx-auto space-y-10">
+        
+        {/* SEZIONE LIDI (Responsive: Cards su Mobile, Tabella su Desktop) */}
+        <section>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-black text-2xl text-slate-100 flex items-center gap-3">
+              <MapPin className="w-6 h-6 text-indigo-500" />
+              Portafoglio Clienti
+            </h2>
+          </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-slate-900 text-slate-400 font-bold text-xs uppercase tracking-wider bg-slate-950/20">
-                <th className="px-6 py-4.5">Stabilimento</th>
-                <th className="px-6 py-4.5">E-mail Gestore</th>
-                <th className="px-6 py-4.5">Contratto</th>
-                <th className="px-6 py-4.5">Guadagno AGY</th>
-                <th className="px-6 py-4.5">Stripe Connected</th>
-                <th className="px-6 py-4.5">Stato contanti</th>
-                <th className="px-6 py-4.5 text-right">Azioni</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-900">
-              {lidi.map((lido) => (
-                <tr key={lido.id} className="hover:bg-slate-900/20 transition-colors">
-                  <td className="px-6 py-4 font-extrabold text-slate-200">
-                    <div>
-                      <span>{lido.nome_struttura}</span>
-                      <span className="block text-[10px] text-slate-500 font-semibold mt-0.5">slug: {lido.slug}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-slate-400 font-medium">{lido.email_amministratore}</td>
-                  <td className="px-6 py-4">
-                    <span className="capitalize font-bold text-xs text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full">
+          {/* MOBILE VIEW (Cards) */}
+          <div className="grid grid-cols-1 gap-4 md:hidden">
+            {lidi.map((lido) => (
+              <div key={lido.id} className="bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 shadow-lg relative overflow-hidden">
+                {!lido.attivo && <div className="absolute top-0 left-0 w-full h-1 bg-red-500"></div>}
+                
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-black text-lg text-white mb-1">{lido.nome_struttura}</h3>
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-400 uppercase tracking-wider border border-indigo-500/20">
                       {lido.tipo_contratto.replace('_', ' ')}
                     </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="font-extrabold text-sm text-emerald-400">
-                      €{(lidiEarnings[lido.id] || 0).toFixed(2)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    {lido.stripe_account_id ? (
-                      <span className="text-emerald-400 flex items-center gap-1 text-xs font-semibold">
-                        <Check className="w-4 h-4" />
-                        Attivo ({lido.stripe_account_id.slice(0, 10)}...)
-                      </span>
-                    ) : (
-                      <span className="text-slate-500 flex items-center gap-1 text-xs font-semibold">
-                        <X className="w-4 h-4" />
-                        Non configurato
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    {lido.accetta_contanti ? (
-                      <span className="text-emerald-400 text-xs font-bold">Attivo</span>
-                    ) : (
-                      <span className="text-red-400 text-xs font-bold animate-pulse">Sospeso per Frode</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    <button
-                      onClick={() => handleImpersonate(lido.id)}
-                      className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl text-slate-200 border border-slate-750 transition-colors cursor-pointer"
-                      title="Accedi al gestionale di questo lido"
-                    >
-                      <Users className="w-3.5 h-3.5 text-indigo-400" />
-                      Accedi
-                    </button>
-                    <button
-                      onClick={() => handleOpenLidoDetails(lido)}
-                      className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-xs font-bold px-3.5 py-2 rounded-xl text-white shadow-md shadow-indigo-600/10 transition-colors"
-                    >
-                      <Settings className="w-3.5 h-3.5" />
-                      Visualizza
-                    </button>
-                    <a
-                      href={`/menu/${lido.slug}`}
-                      target="_blank"
-                      className="inline-flex items-center gap-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold px-3 py-2 rounded-xl text-slate-400 hover:text-slate-200 transition-colors"
-                      title="Apri Menu Cliente"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </main>
+                  </div>
+                  <button onClick={() => handleOpenLidoDetails(lido)} className="p-2 bg-slate-800 rounded-xl text-slate-300 hover:text-white transition-colors">
+                    <Settings className="w-5 h-5" />
+                  </button>
+                </div>
 
-      {/* MODAL DI AGGIUNTA LIDO */}
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  <div className="bg-slate-950/50 p-3 rounded-2xl border border-slate-800/50">
+                    <span className="block text-[9px] text-slate-500 uppercase font-bold tracking-wider">Guadagno AGY</span>
+                    <span className="block font-black text-emerald-400 text-base mt-0.5">€{(lidiEarnings[lido.id] || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="bg-slate-950/50 p-3 rounded-2xl border border-slate-800/50">
+                    <span className="block text-[9px] text-slate-500 uppercase font-bold tracking-wider">Stato</span>
+                    {lido.stripe_account_id ? (
+                      <span className="block font-bold text-sky-400 text-sm mt-0.5 flex items-center gap-1">Stripe OK</span>
+                    ) : (
+                      <span className="block font-bold text-slate-400 text-sm mt-0.5">Manca Stripe</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleImpersonate(lido.id)}
+                    className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-black text-white uppercase tracking-wider flex items-center justify-center gap-2 transition-colors border border-slate-700"
+                  >
+                    <Users className="w-4 h-4 text-indigo-400" /> Accedi
+                  </button>
+                  <a
+                    href={`/menu/${lido.slug}`}
+                    target="_blank"
+                    className="w-12 flex items-center justify-center bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-400 hover:text-white transition-colors border border-slate-700"
+                  >
+                    <Eye className="w-5 h-5" />
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* DESKTOP VIEW (Tabella Glassmorphism) */}
+          <div className="hidden md:block bg-slate-900/40 backdrop-blur-xl border border-slate-800/80 rounded-[2rem] overflow-hidden shadow-2xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-slate-800/60 text-slate-400 font-bold text-[10px] uppercase tracking-widest bg-slate-950/40">
+                    <th className="px-6 py-5">Stabilimento</th>
+                    <th className="px-6 py-5">Contratto</th>
+                    <th className="px-6 py-5">Guadagno AGY</th>
+                    <th className="px-6 py-5">Stripe</th>
+                    <th className="px-6 py-5">Contanti</th>
+                    <th className="px-6 py-5 text-right">Azioni</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/50">
+                  {lidi.map((lido) => (
+                    <tr key={lido.id} className="hover:bg-slate-800/30 transition-colors">
+                      <td className="px-6 py-4.5 font-extrabold text-slate-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-white font-black shrink-0 border border-slate-700">
+                            {lido.nome_struttura.charAt(0)}
+                          </div>
+                          <div>
+                            <span className="text-base">{lido.nome_struttura}</span>
+                            <span className="block text-[10px] text-slate-500 font-semibold">{lido.email_amministratore}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4.5">
+                        <span className="font-bold text-[10px] text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-full uppercase tracking-wider">
+                          {lido.tipo_contratto.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4.5">
+                        <span className="font-black text-base text-emerald-400">
+                          €{(lidiEarnings[lido.id] || 0).toFixed(2)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4.5">
+                        {lido.stripe_account_id ? (
+                          <span className="text-sky-400 flex items-center gap-1.5 text-xs font-bold">
+                            <Check className="w-4 h-4" /> Attivo
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 flex items-center gap-1.5 text-xs font-bold">
+                            <X className="w-4 h-4" /> Manca
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4.5">
+                        {lido.accetta_contanti ? (
+                          <span className="text-emerald-400 text-xs font-bold">OK</span>
+                        ) : (
+                          <span className="text-red-400 text-[10px] font-black uppercase tracking-wider px-2 py-1 bg-red-500/10 rounded-lg animate-pulse border border-red-500/20">Sospeso</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4.5 text-right space-x-2">
+                        <button
+                          onClick={() => handleImpersonate(lido.id)}
+                          className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-[11px] font-black uppercase tracking-wider px-4 py-2.5 rounded-xl text-white transition-colors cursor-pointer"
+                        >
+                          Accedi
+                        </button>
+                        <button
+                          onClick={() => handleOpenLidoDetails(lido)}
+                          className="inline-flex items-center justify-center bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white text-xs font-bold w-10 h-10 rounded-xl transition-all"
+                        >
+                          <Settings className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        {/* SEZIONE CANDIDATURE */}
+        <section>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-black text-2xl text-slate-100 flex items-center gap-3">
+              <Inbox className="w-6 h-6 text-amber-500" />
+              Lead & Candidature
+            </h2>
+          </div>
+          
+          <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800/80 rounded-[2rem] p-4 sm:p-8 shadow-xl">
+            {candidature.length === 0 ? (
+              <div className="py-16 text-center">
+                <Inbox className="w-12 h-12 text-slate-700 mx-auto mb-4" />
+                <p className="text-base text-slate-500 font-bold">Nessun lead in entrata al momento.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {candidature.map((c) => {
+                  const statusConfig: Record<string, { label: string; color: string }> = {
+                    nuova: { label: 'Nuova Lead', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+                    contattato: { label: 'In Trattativa', color: 'bg-sky-500/10 text-sky-400 border-sky-500/20' },
+                    approvata: { label: 'Chiusa (Vinta)', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+                    rifiutata: { label: 'Persa', color: 'bg-red-500/10 text-red-400 border-red-500/20' },
+                  };
+                  const st = statusConfig[c.stato] || statusConfig.nuova;
+
+                  return (
+                    <div key={c.id} className="bg-slate-950/60 border border-slate-800/80 rounded-[1.5rem] p-5 hover:border-slate-700 transition-colors flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-start justify-between mb-3">
+                          <h4 className="font-black text-lg text-white leading-tight">{c.nome_lido}</h4>
+                          <span className={`text-[9px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-widest shrink-0 ${st.color}`}>
+                            {st.label}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-300 font-bold mb-4">{c.nome_contatto}</p>
+                        
+                        <div className="space-y-2 mb-6">
+                          {c.telefono_contatto && (
+                            <a href={`tel:${c.telefono_contatto}`} className="flex items-center gap-2 text-xs text-indigo-400 hover:text-indigo-300 font-semibold bg-indigo-500/5 w-fit px-3 py-1.5 rounded-lg">
+                              <Phone className="w-3.5 h-3.5" /> {c.telefono_contatto}
+                            </a>
+                          )}
+                          {c.email_contatto && (
+                            <a href={`mailto:${c.email_contatto}`} className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-300 font-semibold bg-slate-800/50 w-fit px-3 py-1.5 rounded-lg truncate max-w-full">
+                              <Mail className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{c.email_contatto}</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2 pt-4 border-t border-slate-800/80">
+                        {c.stato === 'nuova' && (
+                          <button
+                            onClick={async () => {
+                              const { createClient } = await import('@/utils/supabase/client');
+                              const supabase = createClient();
+                              await supabase.from('candidature').update({ stato: 'contattato' }).eq('id', c.id);
+                              setCandidature(prev => prev.map(x => x.id === c.id ? { ...x, stato: 'contattato' } : x));
+                            }}
+                            className="w-full py-2.5 bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-sky-500/20 transition-colors"
+                          >
+                            Segna come Contattato
+                          </button>
+                        )}
+                        {(c.stato === 'nuova' || c.stato === 'contattato') && (
+                          <button
+                            onClick={async () => {
+                              handleNomeChange(c.nome_lido);
+                              let contratto = 'commissione_piena';
+                              if (c.piano_preferito && c.piano_preferito.toLowerCase().includes('ibrido')) contratto = 'ibrido';
+                              if (c.piano_preferito && c.piano_preferito.toLowerCase().includes('flat')) contratto = 'stagionale_flat';
+                              setTipoContratto(contratto as any);
+                              setIsModalOpen(true);
+                              const { createClient } = await import('@/utils/supabase/client');
+                              const supabase = createClient();
+                              await supabase.from('candidature').update({ stato: 'approvata' }).eq('id', c.id);
+                              setCandidature(prev => prev.map(x => x.id === c.id ? { ...x, stato: 'approvata' } : x));
+                            }}
+                            className="w-full py-2.5 bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-indigo-500 transition-colors"
+                          >
+                            Onboarda Stabilimento
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
+      </div>
+
+      {/* MODAL DI AGGIUNTA LIDO (Responsive) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-md sm:p-6">
+          <div className="bg-slate-900 sm:border border-slate-800 rounded-t-[2rem] sm:rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:fade-in duration-300">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
               <div>
-                <h3 className="font-extrabold text-xl">Registra Stabilimento</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Configurazione commerciale iniziale</p>
+                <h3 className="font-black text-2xl text-white">Nuovo Lido</h3>
+                <p className="text-xs text-slate-400 font-bold mt-1">Configurazione commerciale</p>
               </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-              >
+              <button onClick={() => setIsModalOpen(false)} className="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {errorMsg && (
-              <div className="bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-semibold leading-relaxed p-3 rounded-xl mb-4">
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold p-4 rounded-xl mb-6">
                 {errorMsg}
               </div>
             )}
 
-            <form onSubmit={handleCreateLido} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Nome Stabilimento Balneare *</label>
+            <form onSubmit={handleCreateLido} className="space-y-5">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Nome Stabilimento</label>
                 <input 
                   type="text" 
                   required
                   placeholder="Es. Lido del Sole"
                   value={nomeStruttura}
                   onChange={(e) => handleNomeChange(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Slug di Navigazione URL *</label>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Slug URL</label>
                 <input 
                   type="text" 
                   required
-                  placeholder="es. lido-del-sole"
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-slate-400 focus:outline-none focus:border-indigo-500 transition-all"
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Tipo Contratto *</label>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Piano Commerciale</label>
                 <select
                   value={tipoContratto}
                   onChange={(e) => setTipoContratto(e.target.value as any)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
                 >
                   <option value="commissione_piena">Opzione A (Commissione 5% Full)</option>
                   <option value="ibrido">Opzione B (Canone 149€/mese + 2%)</option>
@@ -539,395 +668,182 @@ export default function SuperAdminClient({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-4 bg-indigo-650 hover:bg-indigo-650/80 text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-lg transition-all duration-200 mt-6"
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 transition-all duration-200 mt-8 mb-4 sm:mb-0"
               >
-                {isSubmitting ? (
-                  <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                ) : (
-                  "Crea Lido ed Onboarda"
-                )}
+                {isSubmitting ? 'Creazione...' : "Salva e Onboarda"}
               </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* SEZIONE CANDIDATURE */}
-      <div className="max-w-7xl mx-auto mt-10">
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-6.5">
-          <div className="flex items-center gap-3 pb-5 border-b border-slate-900">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
-              <Inbox className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="font-extrabold text-lg text-slate-100">Candidature Lidi</h2>
-              <p className="text-xs text-slate-500">{candidature.filter(c => c.stato === 'nuova').length} nuove su {candidature.length} totali</p>
-            </div>
-          </div>
-
-          {candidature.length === 0 ? (
-            <div className="py-12 text-center">
-              <Inbox className="w-10 h-10 text-slate-700 mx-auto mb-3" />
-              <p className="text-sm text-slate-500 font-medium">Nessuna candidatura ricevuta</p>
-            </div>
-          ) : (
-            <div className="mt-5 space-y-3 max-h-[500px] overflow-y-auto pr-1">
-              {candidature.map((c) => {
-                const statusConfig: Record<string, { label: string; color: string }> = {
-                  nuova: { label: 'Nuova', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-                  contattato: { label: 'Contattato', color: 'bg-sky-500/10 text-sky-400 border-sky-500/20' },
-                  approvata: { label: 'Approvata', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-                  rifiutata: { label: 'Rifiutata', color: 'bg-red-500/10 text-red-400 border-red-500/20' },
-                };
-                const st = statusConfig[c.stato] || statusConfig.nuova;
-
-                return (
-                  <div key={c.id} className="bg-slate-950/50 border border-slate-900 rounded-2xl p-5 hover:border-slate-800 transition-colors">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="font-bold text-sm text-slate-200">{c.nome_lido}</h4>
-                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${st.color}`}>
-                            {st.label}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400">
-                          <span className="font-medium text-slate-300">{c.nome_contatto}</span>
-                        </p>
-                        <div className="flex items-center gap-4 mt-2">
-                          {c.telefono_contatto && (
-                            <a href={`tel:${c.telefono_contatto}`} className="flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 font-medium">
-                              <Phone className="w-3 h-3" />
-                              {c.telefono_contatto}
-                            </a>
-                          )}
-                          {c.email_contatto && (
-                            <a href={`mailto:${c.email_contatto}`} className="flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 font-medium">
-                              <Mail className="w-3 h-3" />
-                              {c.email_contatto}
-                            </a>
-                          )}
-                          <span className="flex items-center gap-1 text-[10px] text-slate-600">
-                            <Clock className="w-3 h-3" />
-                            {new Date(c.creato_il).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* AZIONI */}
-                      <div className="flex gap-2 shrink-0">
-                        {c.stato === 'nuova' && (
-                          <button
-                            onClick={async () => {
-                              const { createClient } = await import('@/utils/supabase/client');
-                              const supabase = createClient();
-                              await supabase.from('candidature').update({ stato: 'contattato' }).eq('id', c.id);
-                              setCandidature(prev => prev.map(x => x.id === c.id ? { ...x, stato: 'contattato' } : x));
-                            }}
-                            className="px-3 py-1.5 bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-xl text-[10px] font-bold hover:bg-sky-500/20 transition-colors"
-                          >
-                            Contattato
-                          </button>
-                        )}
-                        {(c.stato === 'nuova' || c.stato === 'contattato') && (
-                          <button
-                            onClick={async () => {
-                              // Pre-compila il form
-                              handleNomeChange(c.nome_lido);
-                              let contratto = 'commissione_piena';
-                              if (c.piano_preferito && c.piano_preferito.toLowerCase().includes('ibrido')) contratto = 'ibrido';
-                              if (c.piano_preferito && c.piano_preferito.toLowerCase().includes('flat')) contratto = 'stagionale_flat';
-                              setTipoContratto(contratto as any);
-                              setIsModalOpen(true);
-
-                              // Aggiorna lo stato della candidatura
-                              const { createClient } = await import('@/utils/supabase/client');
-                              const supabase = createClient();
-                              await supabase.from('candidature').update({ stato: 'approvata' }).eq('id', c.id);
-                              setCandidature(prev => prev.map(x => x.id === c.id ? { ...x, stato: 'approvata' } : x));
-                            }}
-                            className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-[10px] font-bold hover:bg-emerald-500/20 transition-colors"
-                          >
-                            Approva e Crea Lido
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* MODAL DETTAGLI LIDO (SCHEDA CLIENTE E ANALISI DEL TRANSATO) */}
+      {/* MODAL DETTAGLI LIDO (Responsive) */}
       {selectedLido && selectedLidoStats && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto relative">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md sm:p-4 z-[60]">
+          <div className="bg-slate-900 sm:border border-slate-800 rounded-t-[2rem] sm:rounded-3xl max-w-4xl w-full p-5 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:fade-in">
             
-            {/* HEADER */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-850">
-              <div className="flex items-center gap-3">
-                {selectedLido.logo_url ? (
-                  <img src={selectedLido.logo_url} alt={selectedLido.nome_struttura} className="w-12 h-12 rounded-full object-cover border border-slate-700" />
-                ) : (
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-lg">
-                    {selectedLido.nome_struttura.charAt(0)}
-                  </div>
-                )}
+            {/* Header Modal */}
+            <div className="flex items-start sm:items-center justify-between pb-5 sm:pb-6 border-b border-slate-800/80 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center font-black text-2xl text-white shadow-inner">
+                  {selectedLido.nome_struttura.charAt(0)}
+                </div>
                 <div>
-                  <h3 className="font-extrabold text-xl text-slate-100 flex items-center gap-2">
-                    <span>{selectedLido.nome_struttura}</span>
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                  <h3 className="font-black text-xl sm:text-2xl text-white flex items-center gap-2 flex-wrap">
+                    {selectedLido.nome_struttura}
+                    <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
                       selectedLido.attivo ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
                     }`}>
                       {selectedLido.attivo ? 'Attivo' : 'Sospeso'}
                     </span>
                   </h3>
-                  <a href={`https://waveorder.garganoadvisor.com/menu/${selectedLido.slug}`} target="_blank" className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold mt-0.5 block">
-                    Apri Menu: /menu/{selectedLido.slug}
-                  </a>
+                  <p className="text-xs text-slate-400 font-semibold mt-1">/menu/{selectedLido.slug}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedLido(null)}
-                className="p-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-              >
+              <button onClick={() => setSelectedLido(null)} className="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white mt-1 sm:mt-0">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* GRIGLIA CONTENUTI */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
               
-              {/* COLONNA ANALISI TRANSATO (SINISTRA) */}
+              {/* Analisi Finanziaria */}
               <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Analisi del Transato</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Rendiconto Finanziario</h4>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850">
-                    <span className="block text-[10px] text-slate-500 font-bold uppercase">Transato Totale</span>
-                    <span className="block text-lg font-black text-white mt-1">€{selectedLidoStats.transatoTotale.toFixed(2)}</span>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="bg-slate-950 p-4 sm:p-5 rounded-2xl border border-slate-800">
+                    <span className="block text-[9px] sm:text-[10px] text-slate-500 font-black uppercase tracking-wider">Transato Totale</span>
+                    <span className="block text-xl sm:text-2xl font-black text-white mt-1">€{selectedLidoStats.transatoTotale.toFixed(2)}</span>
                   </div>
-                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850">
-                    <span className="block text-[10px] text-slate-500 font-bold uppercase">Ordini Totali</span>
-                    <span className="block text-lg font-black text-white mt-1">{selectedLidoStats.totaleOrdini}</span>
-                  </div>
-                </div>
-
-                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850 space-y-3">
-                  <span className="block text-[10px] text-slate-500 font-bold uppercase">Dettaglio Metodi Pagamento (Saldi Pagati)</span>
-                  
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400 flex items-center gap-1"><CreditCard className="w-3.5 h-3.5 text-sky-400" /> Stripe:</span>
-                    <span className="font-bold text-slate-200">€{selectedLidoStats.transatoStripe.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400 flex items-center gap-1"><DollarSign className="w-3.5 h-3.5 text-emerald-400" /> Contanti:</span>
-                    <span className="font-bold text-slate-200">€{selectedLidoStats.transatoContanti.toFixed(2)}</span>
-                  </div>
-
-                  <div className="border-t border-slate-900 pt-2 space-y-2">
-                    <span className="block text-[10px] text-slate-500 font-bold uppercase">Commissioni Piattaforma Stimate</span>
-                    
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-400">Commissioni Stripe:</span>
-                      <span className="font-bold text-sky-400">€{selectedLidoStats.commissioniStripe.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-400">Commissioni Contanti Dovute:</span>
-                      <span className="font-bold text-emerald-400">€{selectedLidoStats.commissioniContantiDovute.toFixed(2)}</span>
-                    </div>
+                  <div className="bg-slate-950 p-4 sm:p-5 rounded-2xl border border-slate-800">
+                    <span className="block text-[9px] sm:text-[10px] text-slate-500 font-black uppercase tracking-wider">Ordini Conclusi</span>
+                    <span className="block text-xl sm:text-2xl font-black text-white mt-1">{selectedLidoStats.ordiniCompletati}</span>
                   </div>
                 </div>
 
-                {/* ANTI-FRODE */}
-                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850">
-                  <span className="block text-[10px] text-slate-500 font-bold uppercase mb-2">Prevenzione Evasione Contanti</span>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="block text-xs text-slate-400">Tasso di cancellazione contanti:</span>
-                      <span className={`block font-bold text-sm mt-0.5 ${selectedLidoStats.tassoCancellazioneContanti > 10 ? 'text-red-400 animate-pulse' : 'text-slate-200'}`}>
-                        {selectedLidoStats.tassoCancellazioneContanti.toFixed(1)}%
-                      </span>
+                <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4">
+                  <div>
+                    <span className="block text-[10px] text-slate-500 font-black uppercase tracking-wider mb-2">Split Pagamenti (Incassato)</span>
+                    <div className="flex justify-between items-center text-sm mb-1.5">
+                      <span className="text-slate-300 font-semibold flex items-center gap-2"><CreditCard className="w-4 h-4 text-sky-400" /> Stripe</span>
+                      <span className="font-black text-white">€{selectedLidoStats.transatoStripe.toFixed(2)}</span>
                     </div>
-                    {selectedLidoStats.tassoCancellazioneContanti > 10 && (
-                      <span className="bg-red-500/10 text-red-400 border border-red-500/20 text-[9px] font-bold px-2 py-0.5 rounded-full">
-                        Rischio Evasione Alto
-                      </span>
-                    )}
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-300 font-semibold flex items-center gap-2"><DollarSign className="w-4 h-4 text-emerald-400" /> Contanti</span>
+                      <span className="font-black text-white">€{selectedLidoStats.transatoContanti.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-800/80">
+                    <span className="block text-[10px] text-indigo-400 font-black uppercase tracking-wider mb-2">Revenue Piattaforma</span>
+                    <div className="flex justify-between items-center text-sm mb-1.5">
+                      <span className="text-slate-400 font-semibold">Da Stripe (Auto)</span>
+                      <span className="font-black text-sky-400">€{selectedLidoStats.commissioniStripe.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-400 font-semibold">Da Contanti (Da Fatturare)</span>
+                      <span className="font-black text-emerald-400">€{selectedLidoStats.commissioniContantiDovute.toFixed(2)}</span>
+                    </div>
                   </div>
                 </div>
+
+                {selectedLidoStats.tassoCancellazioneContanti > 10 && (
+                  <div className="bg-red-500/10 p-4 rounded-2xl border border-red-500/20">
+                    <span className="block text-[10px] text-red-400 font-black uppercase tracking-wider mb-1">Allarme Evasione</span>
+                    <p className="text-xs text-red-300 font-semibold leading-relaxed">
+                      Il {selectedLidoStats.tassoCancellazioneContanti.toFixed(1)}% degli ordini in contanti viene annullato. Potenziale frode sulle commissioni.
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {/* COLONNA IMPOSTAZIONI CONTRATTO & SUPER ADMIN (DESTRA) */}
-              <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Configurazione Commerciale & Stato</h4>
+              {/* Impostazioni Contratto */}
+              <div className="space-y-4 pb-6 sm:pb-0">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Gestione Contratto & Sicurezza</h4>
                 
-                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850 space-y-4">
-                  
+                <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-5">
                   {updateError && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl font-medium">
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl font-bold">
                       {updateError}
                     </div>
                   )}
 
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Tipo di Contratto</label>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Piano Attuale</label>
                     <select
                       value={editTipoContratto}
                       onChange={(e) => setEditTipoContratto(e.target.value as any)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
                     >
-                      <option value="commissione_piena">Opzione A (Commissione 5%)</option>
-                      <option value="ibrido">Opzione B (Canone 149€/mese + 2%)</option>
-                      <option value="stagionale_flat">Opzione C (Flat Stagionale 900€)</option>
+                      <option value="commissione_piena">A - Commissione 5%</option>
+                      <option value="ibrido">B - 149€/mese + 2%</option>
+                      <option value="stagionale_flat">C - Flat Stagionale 900€</option>
                     </select>
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-1.5">
-                      <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Quota Comm. %</label>
+                    <div>
+                      <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Comm. %</label>
                       <input
-                        type="number"
-                        step="0.1"
-                        value={editCommissione}
-                        onChange={(e) => setEditCommissione(Number(e.target.value))}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        type="number" step="0.1" value={editCommissione} onChange={(e) => setEditCommissione(Number(e.target.value))}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-indigo-500 text-center"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Fisso Mensile (€)</label>
+                    <div>
+                      <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Mese €</label>
                       <input
-                        type="number"
-                        value={editCanoneMensile}
-                        onChange={(e) => setEditCanoneMensile(Number(e.target.value))}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        type="number" value={editCanoneMensile} onChange={(e) => setEditCanoneMensile(Number(e.target.value))}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-indigo-500 text-center"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Fisso Stag. (€)</label>
+                    <div>
+                      <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Stag. €</label>
                       <input
-                        type="number"
-                        value={editCanoneStagionale}
-                        onChange={(e) => setEditCanoneStagionale(Number(e.target.value))}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        type="number" value={editCanoneStagionale} onChange={(e) => setEditCanoneStagionale(Number(e.target.value))}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-indigo-500 text-center"
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2">
-                    <div>
-                      <span className="block text-xs font-bold text-slate-300">Stato Funzionamento</span>
-                      <span className="block text-[10px] text-slate-500">Sospendi l'accesso a questo lido</span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={editAttivo}
-                      onChange={(e) => setEditAttivo(e.target.checked)}
-                      className="w-5 h-5 rounded border-slate-800 text-indigo-650 bg-slate-950 focus:ring-indigo-500/50 cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-900">
-                    <div>
-                      <span className="block text-xs font-bold text-slate-300">Pagamenti Contanti</span>
-                      <span className="block text-[10px] text-slate-500">Forza riattivazione contanti</span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={editAccettaContanti}
-                      onChange={(e) => setEditAccettaContanti(e.target.checked)}
-                      className="w-5 h-5 rounded border-slate-800 text-indigo-650 bg-slate-950 focus:ring-indigo-500/50 cursor-pointer"
-                    />
+                  <div className="space-y-3 pt-3 border-t border-slate-800/80">
+                    <label className="flex items-center justify-between p-3 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer">
+                      <div>
+                        <span className="block text-xs font-black text-white mb-0.5">Lido Attivo</span>
+                        <span className="block text-[10px] text-slate-400 font-semibold">Disattiva per sospendere l'accesso</span>
+                      </div>
+                      <input type="checkbox" checked={editAttivo} onChange={(e) => setEditAttivo(e.target.checked)} className="w-5 h-5 rounded border-slate-700 bg-slate-800" />
+                    </label>
+                    <label className="flex items-center justify-between p-3 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer">
+                      <div>
+                        <span className="block text-xs font-black text-white mb-0.5">Permetti Contanti</span>
+                        <span className="block text-[10px] text-slate-400 font-semibold">Disattiva se sospetti frode</span>
+                      </div>
+                      <input type="checkbox" checked={editAccettaContanti} onChange={(e) => setEditAccettaContanti(e.target.checked)} className="w-5 h-5 rounded border-slate-700 bg-slate-800" />
+                    </label>
                   </div>
 
                   <button
                     onClick={handleSaveLidoDetails}
                     disabled={isUpdatingLido}
-                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-lg transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 transition-all mt-4"
                   >
-                    {isUpdatingLido ? (
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    ) : (
-                      'Salva Impostazioni Commerciali'
-                    )}
+                    {isUpdatingLido ? 'Salvataggio...' : 'Salva Modifiche'}
                   </button>
-
                   <button
                     onClick={async () => {
-                      if (!confirm(`Sei sicuro di voler eliminare DEFINITIVAMENTE il lido "${selectedLido.nome_struttura}"?\nQuesta operazione cancellerà tutti i dipendenti, ombrelloni, prodotti, ordini e commissioni ad esso associati e non sarà reversibile.`)) return;
-                      try {
-                        const res = await fetch(`/api/lidi?id=${selectedLido.id}`, { method: 'DELETE' });
-                        const data = await res.json();
-                        if (res.ok) {
-                          alert('Lido eliminato con successo!');
-                          setLidi(prev => prev.filter(l => l.id !== selectedLido.id));
-                          setSelectedLido(null);
-                        } else {
-                          alert(`Errore: ${data.error || 'Cancellazione non riuscita'}`);
-                        }
-                      } catch {
-                        alert('Errore di rete durante la cancellazione.');
+                      if (!confirm(`Sei sicuro di voler eliminare DEFINITIVAMENTE il lido "${selectedLido.nome_struttura}"?`)) return;
+                      const res = await fetch(`/api/lidi?id=${selectedLido.id}`, { method: 'DELETE' });
+                      if (res.ok) {
+                        setLidi(prev => prev.filter(l => l.id !== selectedLido.id));
+                        setSelectedLido(null);
                       }
                     }}
-                    className="w-full py-3 bg-red-950/20 hover:bg-red-900 border border-red-500/20 hover:border-red-500/30 text-red-400 font-bold rounded-xl text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 mt-2"
+                    className="w-full py-3 mt-2 text-red-500 font-bold text-xs uppercase tracking-widest hover:bg-red-500/10 rounded-xl transition-colors"
                   >
-                    Elimina Struttura
+                    Elimina Struttura (Danger)
                   </button>
                 </div>
-              </div>
-            </div>
-
-            {/* SEZIONE ORDINI RECENTI DEL LIDO */}
-            <div className="pt-4 border-t border-slate-850">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3.5">Ultimi Ordini</h4>
-              <div className="bg-slate-950 border border-slate-850 rounded-2xl overflow-hidden">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-900 text-slate-500 font-bold bg-slate-950/40">
-                      <th className="px-4 py-3">Orario</th>
-                      <th className="px-4 py-3">Metodo</th>
-                      <th className="px-4 py-3">Totale</th>
-                      <th className="px-4 py-3">Stato Ordine</th>
-                      <th className="px-4 py-3">Stato Pagamento</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-900 text-slate-300">
-                    {paidOrders
-                      .filter(o => o.lido_id === selectedLido.id)
-                      .slice(0, 5)
-                      .map((o) => (
-                        <tr key={o.id}>
-                          <td className="px-4 py-2.5">{new Date(o.creato_il).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</td>
-                          <td className="px-4 py-2.5 capitalize">{o.metodo_pagamento.replace('_', ' ')}</td>
-                          <td className="px-4 py-2.5 font-bold">€{Number(o.totale).toFixed(2)}</td>
-                          <td className="px-4 py-2.5">
-                            <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] uppercase ${
-                              o.stato === 'consegnato' ? 'bg-emerald-500/10 text-emerald-400' : o.stato === 'annullato' ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'
-                            }`}>
-                              {o.stato}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2.5">
-                            <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] uppercase ${
-                              o.stato_pagamento === 'pagato' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-                            }`}>
-                              {o.stato_pagamento}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    {paidOrders.filter(o => o.lido_id === selectedLido.id).length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="text-center py-6 text-slate-500 font-medium">
-                          Nessun ordine effettuato per questa struttura
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
               </div>
             </div>
 
