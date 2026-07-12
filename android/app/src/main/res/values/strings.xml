@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">WaveOrder</string>
+    <string name="title_activity_main">WaveOrder</string>
+    <string name="package_name">com.waveorder.app</string>
+    <string name="custom_url_scheme">com.waveorder.app</string>
+</resources>
