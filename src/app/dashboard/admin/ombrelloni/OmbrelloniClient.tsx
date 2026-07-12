@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Plus, ArrowLeft, QrCode, Printer, Trash2, HelpCircle } from 'lucide-react';
+import { Plus, ArrowLeft, Printer, Trash2, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCode } from 'react-qrcode-logo';
 
 interface Ombrellone {
   id: string;
@@ -214,21 +214,18 @@ export default function OmbrelloniClient({ lidoId, lidoSlug, initialOmbrelloni }
                     </div>
 
                     <div className="bg-white p-2.5 rounded-2xl border border-slate-800 print:border-black print:rounded-none">
-                      <QRCodeSVG
+                      <QRCode
                         value={targetUrl}
                         size={160}
                         bgColor="#ffffff"
                         fgColor="#000000"
-                        level="H"
-                        includeMargin={false}
-                        imageSettings={{
-                          src: "/assets/waveorder_logo_small.png", // Usa un logo o semplicemente W
-                          x: undefined,
-                          y: undefined,
-                          height: 40,
-                          width: 40,
-                          excavate: true,
-                        }}
+                        qrStyle="dots"
+                        eyeRadius={5}
+                        logoImage="/assets/waveorder_logo_small.png"
+                        logoWidth={40}
+                        logoHeight={40}
+                        removeQrCodeBehindLogo={true}
+                        logoPadding={2}
                       />
                     </div>
 
