@@ -40,10 +40,16 @@ export default function LandingPage() {
     // 3. Stagionale Flat (900€ una tantum = circa 180€/mese calcolati su 5 mesi maggio-settembre)
     const costoFlat = 180;
 
-    return { costoPiena, costoIbrido, costoFlat };
+    const minCosto = Math.min(costoPiena, costoIbrido, costoFlat);
+    let planScelto = 'A';
+    if (minCosto === costoPiena) planScelto = 'A';
+    else if (minCosto === costoFlat) planScelto = 'C';
+    else planScelto = 'B';
+
+    return { costoPiena, costoIbrido, costoFlat, planScelto };
   };
 
-  const { costoPiena, costoIbrido, costoFlat } = calcoloPiani();
+  const { costoPiena, costoIbrido, costoFlat, planScelto } = calcoloPiani();
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -306,9 +312,12 @@ export default function LandingPage() {
           </div>
 
           {/* SIMULATOR CARDS */}
-          <div className="flex-1 w-full space-y-4">
+          <div className="flex-1 w-full space-y-4 mt-6 lg:mt-0">
             {/* Plan A card */}
-            <div className="bg-slate-950/80 border border-indigo-500/20 p-5.5 rounded-2xl flex justify-between items-center transition-all duration-300 hover:border-indigo-500/40">
+            <div className={`relative bg-slate-950/80 p-5.5 rounded-2xl flex justify-between items-center transition-all duration-300 ${planScelto === 'A' ? 'border-2 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]' : 'border border-slate-800 hover:border-indigo-500/40'}`}>
+              {planScelto === 'A' && (
+                <div className="absolute -top-3 left-6 bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">Più Conveniente</div>
+              )}
               <div>
                 <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Opzione A (Commissione 5%)</span>
                 <h4 className="font-extrabold text-lg text-slate-200 mt-1">Nessun costo fisso o canone</h4>
@@ -320,7 +329,10 @@ export default function LandingPage() {
             </div>
 
             {/* Plan B card */}
-            <div className="bg-slate-950/80 border border-slate-800 p-5.5 rounded-2xl flex justify-between items-center transition-all duration-300 hover:border-indigo-500/20">
+            <div className={`relative bg-slate-950/80 p-5.5 rounded-2xl flex justify-between items-center transition-all duration-300 ${planScelto === 'B' ? 'border-2 border-sky-400 shadow-[0_0_20px_rgba(56,189,248,0.2)]' : 'border border-slate-800 hover:border-sky-500/40'}`}>
+              {planScelto === 'B' && (
+                <div className="absolute -top-3 left-6 bg-sky-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">Più Conveniente</div>
+              )}
               <div>
                 <span className="text-[10px] font-black text-sky-400 uppercase tracking-widest">Opzione B (Ibrido 149€ + 2%)</span>
                 <h4 className="font-extrabold text-lg text-slate-200 mt-1">Canone mensile + commissione ridotta</h4>
@@ -332,7 +344,10 @@ export default function LandingPage() {
             </div>
 
             {/* Plan C card */}
-            <div className="bg-slate-950/80 border border-slate-800 p-5.5 rounded-2xl flex justify-between items-center transition-all duration-300 hover:border-indigo-500/20">
+            <div className={`relative bg-slate-950/80 p-5.5 rounded-2xl flex justify-between items-center transition-all duration-300 ${planScelto === 'C' ? 'border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]' : 'border border-slate-800 hover:border-emerald-500/40'}`}>
+              {planScelto === 'C' && (
+                <div className="absolute -top-3 left-6 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">Più Conveniente</div>
+              )}
               <div>
                 <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Opzione C (Flat Stagionale)</span>
                 <h4 className="font-extrabold text-lg text-slate-200 mt-1">900€ ad attivazione (0% commissioni)</h4>
