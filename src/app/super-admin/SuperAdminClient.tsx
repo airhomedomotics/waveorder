@@ -632,6 +632,15 @@ export default function SuperAdminClient({
                         {(c.stato === 'nuova' || c.stato === 'contattato') && (
                           <button
                             onClick={async () => {
+                              // Pre-compila il form
+                              handleNomeChange(c.nome_lido);
+                              let contratto = 'commissione_piena';
+                              if (c.piano_preferito && c.piano_preferito.toLowerCase().includes('ibrido')) contratto = 'ibrido';
+                              if (c.piano_preferito && c.piano_preferito.toLowerCase().includes('flat')) contratto = 'stagionale_flat';
+                              setTipoContratto(contratto as any);
+                              setIsModalOpen(true);
+
+                              // Aggiorna lo stato della candidatura
                               const { createClient } = await import('@/utils/supabase/client');
                               const supabase = createClient();
                               await supabase.from('candidature').update({ stato: 'approvata' }).eq('id', c.id);
@@ -639,7 +648,7 @@ export default function SuperAdminClient({
                             }}
                             className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-[10px] font-bold hover:bg-emerald-500/20 transition-colors"
                           >
-                            Approva
+                            Approva e Crea Lido
                           </button>
                         )}
                       </div>
