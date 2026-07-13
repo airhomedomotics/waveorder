@@ -50,8 +50,10 @@ export default function LoginClient() {
         }
       } else {
         // Accesso
+        const loginEmail = email.includes('@') ? email : `${email}@waveorder.local`;
+        
         const { data, error } = await supabase.auth.signInWithPassword({
-          email,
+          email: loginEmail,
           password,
         });
 

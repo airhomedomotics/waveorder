@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'WaveOrder',
   webDir: 'out',
   server: {
-    url: 'https://waveorder.garganoadvisor.com',
+    url: 'https://waveorder.garganoadvisor.com/login',
     cleartext: true
   }
 };

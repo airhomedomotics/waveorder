@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import SuperAdminClient from './SuperAdminClient';
@@ -50,7 +51,12 @@ export default async function SuperAdminPage() {
     .order('creato_il', { ascending: false });
 
   // - Pricing Plans (Tariffari dinamici)
-  const { data: pricingPlans } = await supabase
+  const adminSupabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  
+  const { data: pricingPlans } = await adminSupabase
     .from('pricing_plans')
     .select('*')
     .order('created_at', { ascending: true });

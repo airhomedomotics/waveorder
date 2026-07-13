@@ -106,7 +106,7 @@ export default function LidoAdminClient({ lido, orders, cashCommissions, clienti
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nome: newStaffNome,
-          email: newStaffEmail,
+          email: newStaffEmail.includes('@') ? newStaffEmail : `${newStaffEmail}@waveorder.local`,
           password: newStaffPassword,
           ruolo: newStaffRuolo
         })
@@ -1105,14 +1105,14 @@ export default function LidoAdminClient({ lido, orders, cashCommissions, clienti
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Email di Login</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Nome Utente di Login</label>
                   <input
-                    type="email"
+                    type="text"
                     required
                     value={newStaffEmail}
-                    onChange={(e) => setNewStaffEmail(e.target.value)}
+                    onChange={(e) => setNewStaffEmail(e.target.value.toLowerCase().trim())}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                    placeholder="Es. mario.cucina@lido.it"
+                    placeholder="Es. cucina.lido"
                   />
                 </div>
 
