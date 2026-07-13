@@ -92,8 +92,10 @@ export default function OmbrelloniClient({ lidoId, lidoSlug, initialOmbrelloni }
   };
 
   const getQRUrl = (token: string) => {
-    const appUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-    return `${appUrl}/menu/${lidoSlug}?token=${token}`;
+    // Forziamo il dominio reale in produzione per evitare problemi di riconoscimento
+    const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+    const baseUrl = isLocal ? 'http://localhost:3000' : 'https://waveorder.garganoadvisor.com';
+    return `${baseUrl}/menu/${lidoSlug}?token=${token}`;
   };
 
   const triggerPrint = () => {
@@ -219,11 +221,10 @@ export default function OmbrelloniClient({ lidoId, lidoSlug, initialOmbrelloni }
                         size={160}
                         bgColor="#ffffff"
                         fgColor="#000000"
-                        qrStyle="dots"
-                        eyeRadius={5}
+                        ecLevel="H"
                         logoImage="/assets/waveorder_logo_small.png"
-                        logoWidth={40}
-                        logoHeight={40}
+                        logoWidth={35}
+                        logoHeight={35}
                         removeQrCodeBehindLogo={true}
                         logoPadding={2}
                       />
