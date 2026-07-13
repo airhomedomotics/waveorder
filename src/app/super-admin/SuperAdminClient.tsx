@@ -47,11 +47,23 @@ interface Candidatura {
   creato_il: string;
 }
 
+export interface PricingPlan {
+  id: string;
+  name: string;
+  description: string | null;
+  commission_percent: number;
+  fixed_monthly_fee: number;
+  fixed_seasonal_fee: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 interface SuperAdminClientProps {
   initialLidi: Lido[];
   paidOrders: Order[];
   cashCommissions: CashCommission[];
   candidature: Candidatura[];
+  initialPricingPlans: PricingPlan[];
   impersonateLidoId: string | null;
 }
 
@@ -60,10 +72,13 @@ export default function SuperAdminClient({
   paidOrders, 
   cashCommissions, 
   candidature: initialCandidature,
+  initialPricingPlans,
   impersonateLidoId
 }: SuperAdminClientProps) {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tariffario'>('dashboard');
   const [lidi, setLidi] = useState<Lido[]>(initialLidi);
   const [candidature, setCandidature] = useState<Candidatura[]>(initialCandidature);
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>(initialPricingPlans);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Stato per la visualizzazione dettagliata del lido (Scheda Cliente & Analisi)
@@ -236,6 +251,25 @@ export default function SuperAdminClient({
     }
   };
 
+  const handleSavePricingPlan = async (planId: string, updatedPlan: Partial<PricingPlan>) => {
+    try {
+      const res = await fetch('/api/super-admin/pricing', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: planId, ...updatedPlan }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPricingPlans(prev => prev.map(p => p.id === planId ? { ...p, ...updatedPlan } as PricingPlan : p));
+        alert('Piano aggiornato con successo!');
+      } else {
+        alert(data.error || "Errore durante l'aggiornamento del piano");
+      }
+    } catch (err) {
+      alert('Errore di rete');
+    }
+  };
+
   const selectedLidoStats = useMemo(() => {
     if (!selectedLido) return null;
     
@@ -374,10 +408,35 @@ export default function SuperAdminClient({
         </div>
       </div>
 
+      {/* TABS NAVIGATION */}
+      <div className="px-4 sm:px-6 max-w-7xl mx-auto mb-8 flex gap-4 border-b border-slate-800/80">
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          className={`pb-4 px-2 font-bold text-sm tracking-wide transition-colors relative ${activeTab === 'dashboard' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}
+        >
+          Dashboard & Lidi
+          {activeTab === 'dashboard' && (
+            <span className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)] rounded-t-full"></span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('tariffario')}
+          className={`pb-4 px-2 font-bold text-sm tracking-wide transition-colors relative flex items-center gap-2 ${activeTab === 'tariffario' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}
+        >
+          <CreditCard className="w-4 h-4" />
+          Tariffario
+          {activeTab === 'tariffario' && (
+            <span className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)] rounded-t-full"></span>
+          )}
+        </button>
+      </div>
+
       <div className="px-4 sm:px-6 max-w-7xl mx-auto space-y-10">
         
-        {/* SEZIONE LIDI (Responsive: Cards su Mobile, Tabella su Desktop) */}
-        <section>
+        {activeTab === 'dashboard' && (
+          <>
+            {/* SEZIONE LIDI (Responsive: Cards su Mobile, Tabella su Desktop) */}
+            <section>
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-black text-2xl text-slate-100 flex items-center gap-3">
               <MapPin className="w-6 h-6 text-indigo-500" />
@@ -607,6 +666,73 @@ export default function SuperAdminClient({
             )}
           </div>
         </section>
+        </>
+      )}
+
+      {activeTab === 'tariffario' && (
+        <section>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-black text-2xl text-slate-100 flex items-center gap-3">
+              <DollarSign className="w-6 h-6 text-emerald-400" />
+              Gestione Piani e Commissioni
+            </h2>
+            <button
+              onClick={handleRefreshPricing}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-700 transition-colors"
+            >
+              <RefreshCcw className={`w-4 h-4 ${isLoadingPlans ? 'animate-spin' : ''}`} />
+              {isLoadingPlans ? 'Aggiornamento...' : 'Aggiorna'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {pricingPlans.map(plan => (
+              <div key={plan.id} className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="font-black text-xl text-white">{plan.name}</h3>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Commissione %</label>
+                    <input 
+                      type="number" step="0.1" 
+                      value={plan.commission_percent}
+                      onChange={(e) => setPricingPlans(prev => prev.map(p => p.id === plan.id ? { ...p, commission_percent: Number(e.target.value) } : p))}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all text-right font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Costo Mensile FIsso €</label>
+                    <input 
+                      type="number" 
+                      value={plan.fixed_monthly_fee}
+                      onChange={(e) => setPricingPlans(prev => prev.map(p => p.id === plan.id ? { ...p, fixed_monthly_fee: Number(e.target.value) } : p))}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all text-right font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Costo Flat Stagionale €</label>
+                    <input 
+                      type="number" 
+                      value={plan.fixed_seasonal_fee}
+                      onChange={(e) => setPricingPlans(prev => prev.map(p => p.id === plan.id ? { ...p, fixed_seasonal_fee: Number(e.target.value) } : p))}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all text-right font-bold"
+                    />
+                  </div>
+
+                  <button 
+                    onClick={() => handleUpdatePlan(plan.id, plan)}
+                    className="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-colors"
+                  >
+                    Salva Piano
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       </div>
 

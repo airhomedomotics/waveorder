@@ -49,12 +49,19 @@ export default async function SuperAdminPage() {
     .select('*')
     .order('creato_il', { ascending: false });
 
+  // - Pricing Plans (Tariffari dinamici)
+  const { data: pricingPlans } = await supabase
+    .from('pricing_plans')
+    .select('*')
+    .order('created_at', { ascending: true });
+
   return (
     <SuperAdminClient
       initialLidi={lidi || []}
       paidOrders={paidOrders || []}
       cashCommissions={cashCommissions || []}
       candidature={candidature || []}
+      initialPricingPlans={pricingPlans || []}
       impersonateLidoId={impersonateLidoId}
     />
   );

@@ -18,6 +18,13 @@ import {
   Users
 } from 'lucide-react';
 import Link from 'next/link';
+import { createClient } from '@/utils/supabase/client';
+
+// Helper per ottenere un piano dal nome o usare un default
+const getPlanByPrefix = (plans: any[], prefix: string, defaultPlan: any) => {
+  const found = plans.find(p => p.name.startsWith(prefix));
+  return found || defaultPlan;
+};
 
 export default function LandingPage() {
   const [transitoMensile, setTransitoMensile] = useState<number>(30000);
@@ -29,16 +36,35 @@ export default function LandingPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Calcolo dei piani
-  const calcoloPiani = () => {
-    // 1. Commissione 5%
-    const costoPiena = transitoMensile * 0.05;
-    
-    // 2. Ibrido (149€ fisso + 2%)
-    const costoIbrido = 149 + (transitoMensile * 0.02);
+  // Piani dinamici dal DB
+  const [dbPlans, setDbPlans] = useState<any[]>([]);
 
-    // 3. Stagionale Flat (900€ una tantum = circa 180€/mese calcolati su 5 mesi maggio-settembre)
-    const costoFlat = 180;
+  React.useEffect(() => {
+    async function loadPlans() {
+      const supabase = createClient();
+      const { data } = await supabase.from('pricing_plans').select('*').eq('is_active', true);
+      if (data) {
+        setDbPlans(data);
+      }
+    }
+    loadPlans();
+  }, []);
+
+  // Calcolo dei piani dinamico
+  const calcoloPiani = () => {
+    // Valori di default
+    const planA = getPlanByPrefix(dbPlans, 'Opzione A', { commission_percent: 5, fixed_monthly_fee: 0, fixed_seasonal_fee: 0 });
+    const planB = getPlanByPrefix(dbPlans, 'Opzione B', { commission_percent: 2, fixed_monthly_fee: 149, fixed_seasonal_fee: 0 });
+    const planC = getPlanByPrefix(dbPlans, 'Opzione C', { commission_percent: 0, fixed_monthly_fee: 0, fixed_seasonal_fee: 900 });
+
+    // 1. Commissione
+    const costoPiena = (transitoMensile * (planA.commission_percent / 100)) + Number(planA.fixed_monthly_fee);
+    
+    // 2. Ibrido
+    const costoIbrido = Number(planB.fixed_monthly_fee) + (transitoMensile * (planB.commission_percent / 100));
+
+    // 3. Stagionale Flat (calcolata su 5 mesi stagionali, se la fee mensile è zero)
+    const costoFlat = planC.fixed_monthly_fee > 0 ? Number(planC.fixed_monthly_fee) : (Number(planC.fixed_seasonal_fee) / 5);
 
     const minCosto = Math.min(costoPiena, costoIbrido, costoFlat);
     let planScelto = 'A';
@@ -46,10 +72,13 @@ export default function LandingPage() {
     else if (minCosto === costoFlat) planScelto = 'C';
     else planScelto = 'B';
 
-    return { costoPiena, costoIbrido, costoFlat, planScelto };
+    return { 
+      costoPiena, costoIbrido, costoFlat, planScelto,
+      planA, planB, planC
+    };
   };
 
-  const { costoPiena, costoIbrido, costoFlat, planScelto } = calcoloPiani();
+  const { costoPiena, costoIbrido, costoFlat, planScelto, planA, planB, planC } = calcoloPiani();
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -327,8 +356,8 @@ export default function LandingPage() {
                 <div className="absolute -top-3 left-6 bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">Più Conveniente</div>
               )}
               <div>
-                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Opzione A (Commissione 5%)</span>
-                <h4 className="font-extrabold text-lg text-slate-200 mt-1">Nessun costo fisso o canone</h4>
+                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{planA.name} {planA.commission_percent > 0 && `(Commissione ${planA.commission_percent}%)`}</span>
+                <h4 className="font-extrabold text-lg text-slate-200 mt-1">{planA.description || 'Nessun costo fisso o canone'}</h4>
               </div>
               <div className="text-right">
                 <span className="text-xs text-slate-500 block">Costo servizio mensile:</span>
@@ -342,8 +371,8 @@ export default function LandingPage() {
                 <div className="absolute -top-3 left-6 bg-sky-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">Più Conveniente</div>
               )}
               <div>
-                <span className="text-[10px] font-black text-sky-400 uppercase tracking-widest">Opzione B (Ibrido 149€ + 2%)</span>
-                <h4 className="font-extrabold text-lg text-slate-200 mt-1">Canone mensile + commissione ridotta</h4>
+                <span className="text-[10px] font-black text-sky-400 uppercase tracking-widest">{planB.name} {planB.fixed_monthly_fee > 0 && `(${planB.fixed_monthly_fee}€`} {planB.commission_percent > 0 && `+ ${planB.commission_percent}%)`}</span>
+                <h4 className="font-extrabold text-lg text-slate-200 mt-1">{planB.description || 'Canone mensile + commissione ridotta'}</h4>
               </div>
               <div className="text-right">
                 <span className="text-xs text-slate-500 block">Costo fisso + comm:</span>
@@ -357,8 +386,8 @@ export default function LandingPage() {
                 <div className="absolute -top-3 left-6 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">Più Conveniente</div>
               )}
               <div>
-                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Opzione C (Flat Stagionale)</span>
-                <h4 className="font-extrabold text-lg text-slate-200 mt-1">900€ ad attivazione (0% commissioni)</h4>
+                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{planC.name}</span>
+                <h4 className="font-extrabold text-lg text-slate-200 mt-1">{planC.description || 'Costo fisso flat'}</h4>
               </div>
               <div className="text-right">
                 <span className="text-xs text-slate-500 block">Costo fisso medio flat:</span>
@@ -385,17 +414,17 @@ export default function LandingPage() {
             <div className="bg-slate-900 border border-slate-850 p-8 rounded-[2rem] flex flex-col justify-between space-y-8">
               <div className="space-y-6">
                 <div>
-                  <h4 className="font-black text-lg text-indigo-400">Commissione Zero-Rischi</h4>
-                  <p className="text-xs text-slate-500 mt-1">Perfetto per iniziare senza canoni</p>
+                  <h4 className="font-black text-lg text-indigo-400">{planA.name}</h4>
+                  <p className="text-xs text-slate-500 mt-1">{planA.description || 'Perfetto per iniziare senza canoni'}</p>
                 </div>
                 <div className="flex items-baseline text-white">
-                  <span className="text-5xl font-black tracking-tight">5%</span>
+                  <span className="text-5xl font-black tracking-tight">{planA.commission_percent}%</span>
                   <span className="text-xs text-slate-500 font-bold uppercase tracking-wider ml-2">sul transato</span>
                 </div>
                 <ul className="space-y-3.5 text-xs text-slate-300">
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Ordini illimitati dall'ombrellone</li>
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Stripe Connect integrato</li>
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Commissioni Stripe incluse nel 5%</li>
+                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Commissioni incluse</li>
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Pannello barista realtime</li>
                 </ul>
               </div>
@@ -403,39 +432,49 @@ export default function LandingPage() {
             </div>
 
             {/* Price 2 */}
-            <div className="bg-slate-900 border-2 border-indigo-500/40 p-8 rounded-[2rem] flex flex-col justify-between space-y-8 relative">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-indigo-500 text-white font-extrabold text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg">
-                Consigliato
+            <div className="bg-gradient-to-b from-sky-900/20 to-slate-900 border-2 border-sky-500/50 p-8 rounded-[2rem] flex flex-col justify-between space-y-8 relative transform md:-translate-y-4 shadow-2xl shadow-sky-900/20">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-sky-500 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg">
+                Il Più Scelto
               </div>
               <div className="space-y-6">
                 <div>
-                  <h4 className="font-black text-lg text-white">Piano Ibrido</h4>
-                  <p className="text-xs text-slate-400 mt-1">La soluzione più equilibrata</p>
+                  <h4 className="font-black text-lg text-sky-400">{planB.name}</h4>
+                  <p className="text-xs text-slate-500 mt-1">{planB.description || 'Il bilanciamento perfetto per lidi di medie dimensioni'}</p>
                 </div>
-                <div className="flex items-baseline text-white">
-                  <span className="text-5xl font-black tracking-tight">149€</span>
-                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider ml-2">/mese + 2%</span>
+                <div className="flex flex-col text-white">
+                  <div className="flex items-baseline">
+                    <span className="text-5xl font-black tracking-tight">€{planB.fixed_monthly_fee}</span>
+                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wider ml-2">/mese</span>
+                  </div>
+                  <div className="flex items-center mt-2 text-sky-400 font-bold">
+                    <Plus className="w-4 h-4 mr-1" /> {planB.commission_percent}% commissione transato
+                  </div>
                 </div>
-                <ul className="space-y-3.5 text-xs text-slate-200">
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Supporto prioritario 7/7</li>
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> KDS e gestione ordini inclusa</li>
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Reportistiche avanzate incassi</li>
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Zero commissioni sulle mance</li>
+                <ul className="space-y-3.5 text-xs text-slate-300">
+                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Tutti i vantaggi di {planA.name}</li>
+                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Dashboard Analytics base</li>
+                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Risparmio su alti volumi</li>
+                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> Supporto Prioritario</li>
                 </ul>
               </div>
-              <a href="#contact" className="w-full py-4 text-center bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl transition-all duration-200 text-xs uppercase tracking-wider shadow-lg shadow-indigo-600/20">Scegli Ibrido</a>
+              <a href="#contact" className="block text-center w-full bg-sky-500 hover:bg-sky-400 text-white font-bold py-3 rounded-xl shadow-lg shadow-sky-500/25 transition-colors">Contattaci</a>
             </div>
 
             {/* Price 3 */}
             <div className="bg-slate-900 border border-slate-850 p-8 rounded-[2rem] flex flex-col justify-between space-y-8">
               <div className="space-y-6">
                 <div>
-                  <h4 className="font-black text-lg text-emerald-400">Flat Stagionale</h4>
-                  <p className="text-xs text-slate-500 mt-1">Costo fisso senza sorprese</p>
+                  <h4 className="font-black text-lg text-emerald-400">{planC.name}</h4>
+                  <p className="text-xs text-slate-500 mt-1">{planC.description || 'Massimo guadagno, zero commissioni sulle vendite'}</p>
                 </div>
-                <div className="flex items-baseline text-white">
-                  <span className="text-5xl font-black tracking-tight">900€</span>
-                  <span className="text-xs text-slate-500 font-bold uppercase tracking-wider ml-2">/stagione</span>
+                <div className="flex flex-col text-white">
+                  <div className="flex items-baseline">
+                    <span className="text-5xl font-black tracking-tight">€{planC.fixed_seasonal_fee}</span>
+                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wider ml-2">/stagione</span>
+                  </div>
+                  <div className="flex items-center mt-2 text-emerald-400 font-bold">
+                    0% commissione transato
+                  </div>
                 </div>
                 <ul className="space-y-3.5 text-xs text-slate-300">
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500" /> 0% di commissioni trattenute</li>
