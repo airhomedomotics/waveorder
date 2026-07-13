@@ -15,7 +15,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Star,
-  Users
+  Users,
+  Plus
 } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
