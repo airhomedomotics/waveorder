@@ -182,14 +182,7 @@ export default function LandingPage() {
             >
               Simula Ricavi
             </a>
-            <a 
-              href="/waveorder-app.apk" 
-              download
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-slate-900/50 backdrop-blur-md border border-sky-500/30 hover:bg-slate-800/80 hover:border-sky-400 font-bold px-8 py-4 rounded-2xl transition-all duration-300 text-sky-400 shadow-lg shadow-sky-500/20 hover:shadow-sky-500/40 hover:-translate-y-0.5"
-            >
-              <Smartphone className="w-5 h-5" />
-              Scarica WaveOrder Guest
-            </a>
+
           </div>
 
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 pt-6 text-slate-500 text-xs font-semibold uppercase tracking-wider">

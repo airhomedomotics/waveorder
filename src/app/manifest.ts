@@ -2,10 +2,10 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'WaveOrder - Ordinazioni Spiaggia',
+    name: 'WaveOrder Staff',
     short_name: 'WaveOrder',
-    description: 'Ordina drink e cibo dal tuo ombrellone con un click',
-    start_url: '/',
+    description: 'Dashboard di gestione ordini per lo staff del Lido',
+    start_url: '/login',
     display: 'standalone',
     background_color: '#090d16',
     theme_color: '#090d16',
