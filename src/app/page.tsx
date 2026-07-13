@@ -567,7 +567,8 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-slate-900 py-12 px-6 text-center text-xs text-slate-500">
+      <footer className="border-t border-slate-900 py-12 px-6 flex flex-col items-center gap-4 text-center text-xs text-slate-500">
+        <a href="/waveorder-app.apk" download className="text-sky-400 hover:text-sky-300 font-medium underline underline-offset-4">Scarica App Staff (APK Android)</a>
         <p>© 2026 WaveOrder. Tutti i diritti riservati. P.IVA 01234567890</p>
       </footer>
     </div>
