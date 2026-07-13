@@ -98,21 +98,7 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
   const [fidelityPoints, setFidelityPoints] = useState<number>(0);
   const [useFidelityDiscount, setUseFidelityDiscount] = useState(false);
 
-  // --- APP PROMO MODAL ---
-  const [showAppPromo, setShowAppPromo] = useState(false);
 
-  useEffect(() => {
-    // Se l'utente ha scansionato un QR (initialOmbrellone presente)
-    // E non ha già visto la promo o non è già dentro la webview dell'app nativa
-    if (initialOmbrellone) {
-      const hasSeenPromo = sessionStorage.getItem('waveorder_seen_app_promo');
-      const isNativeApp = localStorage.getItem('waveorder_global_id') !== null; // Semplice check se ha già l'app utente loggata
-      if (!hasSeenPromo && !isNativeApp) {
-        setShowAppPromo(true);
-        sessionStorage.setItem('waveorder_seen_app_promo', 'true');
-      }
-    }
-  }, [initialOmbrellone]);
 
   // --- REGISTRAZIONE / LOGIN OSPITI ---
   interface ClienteFidelity {
@@ -881,39 +867,7 @@ export default function MenuClient({ lido, initialOmbrellone, categories, produc
           </div>
         </div>
       )}
-      {/* App Promo Modal */}
-      {showAppPromo && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
-          <div className="bg-slate-900 border border-indigo-500/30 rounded-3xl w-full max-w-sm p-8 text-center shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl"></div>
-            
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mx-auto mb-5 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-              <span className="text-white font-black text-2xl">W</span>
-            </div>
-            
-            <h3 className="text-2xl font-black text-white mb-2 leading-tight">Scopri l'Esperienza Premium</h3>
-            <p className="text-sm text-slate-300 mb-6 font-medium leading-relaxed">
-              Scarica l'App nativa <strong className="text-white">WaveOrder</strong> per accedere a sconti riservati, promozioni esclusive e raccogliere punti fedeltà nel tuo lido preferito!
-            </p>
-            
-            <div className="space-y-3 relative z-10">
-              <Link 
-                href="/app"
-                onClick={() => setShowAppPromo(false)}
-                className="block w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
-              >
-                Scarica l'App Gratis
-              </Link>
-              <button 
-                onClick={() => setShowAppPromo(false)}
-                className="w-full py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs uppercase tracking-widest transition-all"
-              >
-                Continua sul Web
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
 
     </div>
   );
