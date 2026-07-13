@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Search, MapPin, User, LogIn, ChevronRight, QrCode, Ticket, Clock, Star, Map } from 'lucide-react';
+import { Search, MapPin, User, LogIn, ChevronRight, QrCode, Ticket, Clock, Star, Map, X } from 'lucide-react';
+import { Scanner } from '@yudiel/react-qr-scanner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -187,6 +188,7 @@ export default function AppClient({ lidi }: { lidi: LidoLight[] }) {
       setIsLoading(false);
     }
   };
+  const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem('waveorder_global_phone');
@@ -198,7 +200,11 @@ export default function AppClient({ lidi }: { lidi: LidoLight[] }) {
   };
 
   const openQrScanner = () => {
-    alert("Funzionalità QR Scanner Nativo. Apri l'app sul telefono per scansionare l'ombrellone.");
+    setIsQrScannerOpen(true);
+  };
+
+  const closeQrScanner = () => {
+    setIsQrScannerOpen(false);
   };
 
   if (isLoading && !utente && !showAuth) {
@@ -444,6 +450,45 @@ export default function AppClient({ lidi }: { lidi: LidoLight[] }) {
                 {isLoading ? 'Attendi...' : (isRegistering ? 'Completa Registrazione' : 'Accedi / Continua')}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* QR Scanner Modal */}
+      {isQrScannerOpen && (
+        <div className="fixed inset-0 z-50 bg-black flex flex-col">
+          <div className="flex justify-between items-center p-4 bg-slate-900 border-b border-slate-800">
+            <h3 className="text-white font-bold">Scansiona QR Ombrellone</h3>
+            <button onClick={closeQrScanner} className="p-2 bg-slate-800 rounded-full text-white">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          <div className="flex-1 relative overflow-hidden bg-black flex items-center justify-center">
+            <Scanner 
+              onScan={(result) => {
+                if (result && result.length > 0) {
+                  const url = result[0].rawValue;
+                  if (url.includes('waveorder')) {
+                    window.location.href = url;
+                  } else {
+                    alert('QR Code non valido per WaveOrder');
+                  }
+                }
+              }} 
+            />
+            {/* Sovrimpressione per inquadratura */}
+            <div className="absolute inset-0 border-[40px] border-black/50 pointer-events-none">
+              <div className="w-full h-full border-2 border-indigo-500 rounded-xl relative">
+                {/* Angoli decorativi */}
+                <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-white rounded-tl-xl"></div>
+                <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-white rounded-tr-xl"></div>
+                <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-white rounded-bl-xl"></div>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-white rounded-br-xl"></div>
+              </div>
+            </div>
+          </div>
+          <div className="p-6 bg-slate-900 text-center">
+            <p className="text-sm text-slate-400 font-bold">Inquadra il QR Code presente sull'ombrellone per aprire il menu e ordinare.</p>
           </div>
         </div>
       )}
