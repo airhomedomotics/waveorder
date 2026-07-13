@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, DollarSign, Users, ShieldAlert, Check, X, Plus, Settings, Eye, Inbox, Phone, Mail, Clock, CreditCard, ChevronRight, MapPin } from 'lucide-react';
+import { TrendingUp, DollarSign, Users, ShieldAlert, Check, X, Plus, Settings, Eye, Inbox, Phone, Mail, Clock, CreditCard, ChevronRight, MapPin, RefreshCcw } from 'lucide-react';
 import Link from 'next/link';
 
 interface Lido {
@@ -79,6 +79,7 @@ export default function SuperAdminClient({
   const [lidi, setLidi] = useState<Lido[]>(initialLidi);
   const [candidature, setCandidature] = useState<Candidatura[]>(initialCandidature);
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>(initialPricingPlans);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Stato per la visualizzazione dettagliata del lido (Scheda Cliente & Analisi)
@@ -263,10 +264,25 @@ export default function SuperAdminClient({
         setPricingPlans(prev => prev.map(p => p.id === planId ? { ...p, ...updatedPlan } as PricingPlan : p));
         alert('Piano aggiornato con successo!');
       } else {
-        alert(data.error || "Errore durante l'aggiornamento del piano");
+        alert('Errore aggiornamento piano: ' + data.error);
       }
     } catch (err) {
       alert('Errore di rete');
+    }
+  };
+
+  const handleRefreshPricing = async () => {
+    setIsLoadingPlans(true);
+    try {
+      const res = await fetch('/api/super-admin/pricing');
+      const data = await res.json();
+      if (data.plans) {
+        setPricingPlans(data.plans);
+      }
+    } catch (err) {
+      console.error('Errore ricaricamento piani', err);
+    } finally {
+      setIsLoadingPlans(false);
     }
   };
 
@@ -722,7 +738,7 @@ export default function SuperAdminClient({
                   </div>
 
                   <button 
-                    onClick={() => handleUpdatePlan(plan.id, plan)}
+                    onClick={() => handleSavePricingPlan(plan.id, plan)}
                     className="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-colors"
                   >
                     Salva Piano
