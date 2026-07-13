@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, DollarSign, Users, ShieldAlert, Check, X, Plus, Settings, Eye, Inbox, Phone, Mail, Clock, CreditCard, ChevronRight } from 'lucide-react';
+import { TrendingUp, DollarSign, Users, ShieldAlert, Check, X, Plus, Settings, Eye, Inbox, Phone, Mail, Clock, CreditCard, ChevronRight, MapPin } from 'lucide-react';
 import Link from 'next/link';
 
 interface Lido {

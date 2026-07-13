@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { ShoppingBag, Plus, Minus, X, CreditCard, DollarSign, Check, HelpCircle, GlassWater, Coffee, UtensilsCrossed, User, LogIn, UserPlus, LogOut } from 'lucide-react';
+import Link from 'next/link';
 
 interface Lido {
   id: string;
