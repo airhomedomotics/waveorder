@@ -222,6 +222,8 @@ export default function OmbrelloniClient({ lidoId, lidoSlug, initialOmbrelloni }
                         bgColor="#ffffff"
                         fgColor="#000000"
                         ecLevel="H"
+                        qrStyle="dots"
+                        eyeRadius={5}
                         logoImage="/assets/waveorder_logo_small.png"
                         logoWidth={35}
                         logoHeight={35}
