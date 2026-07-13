@@ -896,7 +896,11 @@ export default function LidoAdminClient({ lido, orders, cashCommissions, clienti
                 <button
                   onClick={async () => {
                     try {
-                      const res = await fetch('/api/stripe/onboarding', { method: 'POST' });
+                      const res = await fetch('/api/stripe/onboarding', { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ lido_id: lido.id })
+                      });
                       const data = await res.json();
                       if (data.url) {
                         window.location.href = data.url;

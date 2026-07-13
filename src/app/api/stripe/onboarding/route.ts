@@ -17,21 +17,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
     }
 
-    // 2. Recupera il lido del gestore
-    const { data: gestore } = await supabase
-      .from('lidi_gestori')
-      .select('lido_id, ruolo')
+    const body = await request.json().catch(() => ({}));
+    const requestedLidoId = body.lido_id;
+
+    // 2. Controlla se è Super Admin
+    const { data: superAdmin } = await supabase
+      .from('super_admins')
+      .select('id')
       .eq('user_id', user.id)
       .single();
 
-    if (!gestore || gestore.ruolo !== 'admin') {
-      return NextResponse.json({ error: 'Accesso non autorizzato' }, { status: 403 });
+    let targetLidoId = null;
+
+    if (superAdmin && requestedLidoId) {
+      targetLidoId = requestedLidoId;
+    } else {
+      // 2b. Recupera il lido del gestore normale
+      const { data: gestore } = await supabase
+        .from('lidi_gestori')
+        .select('lido_id, ruolo')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!gestore || gestore.ruolo !== 'admin') {
+        return NextResponse.json({ error: 'Accesso non autorizzato' }, { status: 403 });
+      }
+      targetLidoId = gestore.lido_id;
     }
 
     const { data: lido } = await supabase
       .from('lidi')
       .select('id, nome_struttura, stripe_account_id, email_amministratore')
-      .eq('id', gestore.lido_id)
+      .eq('id', targetLidoId)
       .single();
 
     if (!lido) {
