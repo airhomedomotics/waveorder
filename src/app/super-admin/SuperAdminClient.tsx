@@ -96,6 +96,8 @@ export default function SuperAdminClient({
   // Campi form nuovo lido
   const [nomeStruttura, setNomeStruttura] = useState('');
   const [slug, setSlug] = useState('');
+  const [emailGestore, setEmailGestore] = useState('');
+  const [passwordGestore, setPasswordGestore] = useState('');
   const [tipoContratto, setTipoContratto] = useState<'commissione_piena' | 'ibrido' | 'stagionale_flat'>('commissione_piena');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -170,7 +172,13 @@ export default function SuperAdminClient({
       const res = await fetch('/api/lidi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome_struttura: nomeStruttura, slug, tipo_contratto: tipoContratto }),
+        body: JSON.stringify({ 
+          nome_struttura: nomeStruttura, 
+          slug, 
+          tipo_contratto: tipoContratto,
+          email_gestore: emailGestore,
+          password_gestore: passwordGestore
+        }),
       });
 
       const data = await res.json();
@@ -180,6 +188,8 @@ export default function SuperAdminClient({
         setIsModalOpen(false);
         setNomeStruttura('');
         setSlug('');
+        setEmailGestore('');
+        setPasswordGestore('');
         setTipoContratto('commissione_piena');
       }
     } catch (err: any) {
@@ -766,13 +776,14 @@ export default function SuperAdminClient({
               </button>
             </div>
 
-            {errorMsg && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold p-4 rounded-xl mb-6">
-                {errorMsg}
-              </div>
-            )}
+            <form onSubmit={handleCreateLido} className="space-y-4">
+              {errorMsg && (
+                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-sm font-bold flex items-start gap-3">
+                  <ShieldAlert className="w-5 h-5 shrink-0" />
+                  <p>{errorMsg}</p>
+                </div>
+              )}
 
-            <form onSubmit={handleCreateLido} className="space-y-5">
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Nome Stabilimento</label>
                 <input 
@@ -785,13 +796,36 @@ export default function SuperAdminClient({
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Slug URL</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Slug URL (dominio)</label>
                 <input 
                   type="text" 
                   required
                   value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
+                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                  placeholder="lido-del-sole"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-slate-400 focus:outline-none focus:border-indigo-500 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Email Gestore (Accesso)</label>
+                <input 
+                  type="email" 
+                  required
+                  value={emailGestore}
+                  onChange={(e) => setEmailGestore(e.target.value)}
+                  placeholder="Es. info@lidodelsole.it"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Password Iniziale</label>
+                <input 
+                  type="text" 
+                  required
+                  value={passwordGestore}
+                  onChange={(e) => setPasswordGestore(e.target.value)}
+                  placeholder="Es. LidoSole2024!"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all"
                 />
               </div>
               <div>

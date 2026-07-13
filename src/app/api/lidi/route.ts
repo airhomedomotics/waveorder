@@ -54,23 +54,49 @@ export async function GET(request: Request) {
   }
 }
 
-// POST: Crea un nuovo lido (Tenant) e mappa l'utente loggato come gestore
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
     
-    // Verifica autenticazione
+    // Verifica autenticazione (deve essere loggato)
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
     }
+    
+    // Verifica che sia un super admin a fare la richiesta
+    const { data: isAdmin } = await supabase
+      .from('super_admins')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+      
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Solo i Super Admin possono creare stabilimenti da qui' }, { status: 403 });
+    }
 
     const body = await request.json();
-    const { nome_struttura, slug, logo_url, colore_primario, tipo_contratto, accetta_contanti } = body;
+    const { nome_struttura, slug, logo_url, colore_primario, tipo_contratto, accetta_contanti, email_gestore, password_gestore } = body;
 
-    if (!nome_struttura || !slug || !tipo_contratto) {
-      return NextResponse.json({ error: 'Campi obbligatori mancanti: nome_struttura, slug, tipo_contratto' }, { status: 400 });
+    if (!nome_struttura || !slug || !tipo_contratto || !email_gestore || !password_gestore) {
+      return NextResponse.json({ error: 'Campi obbligatori mancanti' }, { status: 400 });
     }
+
+    const { createAdminClient } = require('@/utils/supabase/admin');
+    const adminSupabase = createAdminClient();
+
+    // 1. Crea l'utente Gestore su Supabase Auth
+    const { data: authData, error: createAuthError } = await adminSupabase.auth.admin.createUser({
+      email: email_gestore,
+      password: password_gestore,
+      email_confirm: true
+    });
+
+    if (createAuthError || !authData.user) {
+      return NextResponse.json({ error: `Errore creazione account gestore: ${createAuthError?.message}` }, { status: 400 });
+    }
+    
+    const gestoreUser = authData.user;
 
     // Calcola i valori di default per i canoni in base al tipo di contratto
     let quota_commissione_percentuale = 0.00;
@@ -86,13 +112,13 @@ export async function POST(request: Request) {
       canone_stagionale_fisso = 900.00;
     }
 
-    // Inserisci il nuovo lido
-    const { data: lido, error: lidoError } = await supabase
+    // 2. Inserisci il nuovo lido
+    const { data: lido, error: lidoError } = await adminSupabase
       .from('lidi')
       .insert({
         nome_struttura,
         slug,
-        email_amministratore: user.email!,
+        email_amministratore: email_gestore,
         logo_url,
         colore_primario: colore_primario || '#0070f3',
         tipo_contratto,
@@ -105,25 +131,26 @@ export async function POST(request: Request) {
       .single();
 
     if (lidoError || !lido) {
+      await adminSupabase.auth.admin.deleteUser(gestoreUser.id);
       return NextResponse.json({ error: `Errore creazione lido: ${lidoError?.message}` }, { status: 400 });
     }
 
-    // Associa l'utente loggato come amministratore del lido creato
-    const { error: gestoreError } = await supabase
+    // 3. Associa il NUOVO UTENTE come amministratore del lido creato
+    const { error: gestoreError } = await adminSupabase
       .from('lidi_gestori')
       .insert({
         lido_id: lido.id,
-        user_id: user.id,
+        user_id: gestoreUser.id,
         ruolo: 'admin'
       });
 
     if (gestoreError) {
-      // In caso di errore nel mapping, proviamo a cancellare il lido per consistenza
-      await supabase.from('lidi').delete().eq('id', lido.id);
+      await adminSupabase.from('lidi').delete().eq('id', lido.id);
+      await adminSupabase.auth.admin.deleteUser(gestoreUser.id);
       return NextResponse.json({ error: `Errore associazione gestore: ${gestoreError.message}` }, { status: 500 });
     }
 
-    return NextResponse.json({ lido, message: 'Lido creato con successo!' });
+    return NextResponse.json({ lido, message: 'Lido e Account Gestore creati con successo!' });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
